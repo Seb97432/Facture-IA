@@ -302,6 +302,18 @@ def extraire_tva(t):
                                    r"\btva\b", r"\bvat\b"])
     return taux, montant
 
+
+def taux_tva_multiples(t):
+    """Liste tous les taux de TVA presents sur la facture (ex: 20 et 5,5)."""
+    trouves = []
+    for ligne in t.splitlines():
+        m = re.search(r"(?:tva|vat|taxe)[^0-9%]{0,25}(\d{1,2}[.,]\d{1,2}|\d{1,2})\s*%", norme(ligne))
+        if m:
+            v = m.group(1).replace(",", ".")
+            if v not in trouves:
+                trouves.append(v)
+    return trouves
+
 # ============================================================
 # 4. COHERENCE + DOUBLONS
 # ============================================================
@@ -507,12 +519,24 @@ with st.sidebar:
         if HAS_OCR:
             st.success("✅ OCR actif : les PDF scannés seront lus automatiquement.")
         else:
-            st.markdown("Pour lire les **factures scannées** (images), installe Tesseract :")
-            st.code("py -m pip install pytesseract pillow", language="bash")
-            st.markdown("Puis télécharge l'installateur Tesseract (UB-Mannheim) sur :")
-            st.markdown("https://github.com/UB-Mannheim/tesseract/wiki")
-            st.markdown("Installe-le dans `C:\\Program Files\\Tesseract-OCR`, coche les langues "
-                        "« French » et « English », puis relance l'application.")
+            st.markdown("**Étape 1/2 — installe les 2 paquets Python** (clique, ça prend ~20 s) :")
+            if st.button("🛠️ Installer automatiquement (étape 1)", use_container_width=True):
+                import subprocess, sys
+                try:
+                    with st.spinner("Installation de pytesseract + pillow..."):
+                        r = subprocess.run([sys.executable, "-m", "pip", "install", "pytesseract", "pillow"],
+                                           capture_output=True, text=True, timeout=300)
+                    if r.returncode == 0:
+                        st.success("✅ Paquets installés ! Fais l'étape 2, puis relance l'application.")
+                    else:
+                        st.error("Échec. Fais-le à la main : `py -m pip install pytesseract pillow`")
+                except Exception as e:
+                    st.error("Erreur : " + str(e))
+            st.markdown("**Étape 2/2 — installe Tesseract** (le moteur OCR) :")
+            st.markdown("1. Télécharge : https://github.com/UB-Mannheim/tesseract/wiki")
+            st.markdown("2. Lance l'installeur → installe dans `C:\\Program Files\\Tesseract-OCR`")
+            st.markdown("3. Dans l'installeur, **Additional language data** : coche **French** (et English)")
+            st.markdown("4. **Relance l'application** (Ctrl+C puis la commande de lancement)")
 
     with st.expander("❓ C'est quoi HT, TVA, TTC ?"):
         st.markdown("""
@@ -621,6 +645,7 @@ if page == "📄 Factures PDF":
                                    r"balance\s*due", r"total\s*ttc", r"montant\s*ttc",
                                    r"grand\s*total", r"total\s*general", r"\bttc\b", r"\btotal\b"])
         taux, montant_tva = extraire_tva(t)
+        liste_taux = taux_tva_multiples(t)
 
         donnees = {
             "Fournisseur": extraire_fournisseur(lignes_vis or texte.splitlines()),
@@ -648,6 +673,10 @@ if page == "📄 Factures PDF":
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
             df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
                                        use_container_width=True)
+
+            if len(liste_taux) > 1:
+                st.info("🔢 **Plusieurs taux de TVA détectés** : " + ", ".join(liste_taux) +
+                        " %. Vérifie le champ « Taux TVA » : saisi le taux principal, ajuste à la main si besoin.")
 
             manquants = [c for c, v in zip(CHAMPS, df_corrige.iloc[0]) if str(v).strip() == ""]
             if manquants:
@@ -784,6 +813,17 @@ if page == "📋 Récapitulatif":
         st.download_button("⬇️ Exporter en CSV", df_recap.to_csv(index=False).encode("utf-8-sig"),
                            file_name="recapitulatif_factures.csv", mime="text/csv",
                            key="dl_csv", use_container_width=True)
+        # Export CSV "comptable" : separateur point-virgule, en-tetes standards
+        csv_compta = df_recap.copy()
+        csv_compta = csv_compta.rename(columns={
+            "Fournisseur": "TIERS", "N° facture": "PIECE", "Date facture": "DATE_PIECE",
+            "Date échéance": "DATE_ECHEANCE", "Montant HT": "MONTANT_HT",
+            "Taux TVA (%)": "TAUX_TVA", "Montant TVA": "MONTANT_TVA",
+            "Montant TTC": "MONTANT_TTC", "Devise": "DEVISE", "Payée ?": "REGLE"})
+        st.download_button("⬇️ Exporter en CSV comptable (logiciels)",
+                           csv_compta.to_csv(index=False, sep=";").encode("utf-8-sig"),
+                           file_name="export_comptable.csv", mime="text/csv",
+                           key="dl_csv_compta", use_container_width=True)
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine="openpyxl") as w:
             df_recap.to_excel(w, index=False, sheet_name="Factures")
