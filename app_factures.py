@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v7 - theme sombre pro, extraction enrichie, SQLite, doublons."""
+"""FACTURES IA v9 - OCR Tesseract + extraction par position + suivi paiements + stats."""
 
 import re
 import io
@@ -12,6 +12,17 @@ import sqlite3
 import streamlit as st
 import pymupdf  # PyMuPDF
 import pandas as pd
+
+# --- OCR (Tesseract) : facultatif, installe si present ---
+try:
+    import pytesseract
+    from PIL import Image
+    CHEMIN_TESSERACT = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if os.path.exists(CHEMIN_TESSERACT):
+        pytesseract.pytesseract.tesseract_cmd = CHEMIN_TESSERACT
+    HAS_OCR = True
+except Exception:
+    HAS_OCR = False
 
 # ============================================================
 # 1. OUTILS DE BASE
@@ -26,6 +37,47 @@ def lire_texte_pdf(fichier):
         return texte.strip()
     except Exception:
         return None
+
+
+@st.cache_data(show_spinner=False)
+def lignes_par_position(fichier):
+    """Reconstruit les lignes VISUELLES grace aux coordonnees des mots.
+    Corrige les PDF ou l'ordre du texte brut est melange (colonnes, tableaux)."""
+    try:
+        doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
+        lignes = []
+        for page in doc:
+            mots = page.get_text("words")  # (x0, y0, x1, y1, mot, ...)
+            par_y = {}
+            for m in mots:
+                cle = round(m[1] / 4)  # tolerance verticale
+                par_y.setdefault(cle, []).append(m)
+            for cle in sorted(par_y):
+                mots_ligne = sorted(par_y[cle], key=lambda m: m[0])  # gauche -> droite
+                lignes.append(" ".join(m[4] for m in mots_ligne))
+        doc.close()
+        return lignes
+    except Exception:
+        return None
+
+
+@st.cache_data(show_spinner=False)
+def ocr_pdf(fichier, _progress=None):
+    """OCR (Tesseract) pour les PDF scannes : chaque page devient image puis texte."""
+    doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
+    textes = []
+    for page in doc:
+        pix = page.get_pixmap(dpi=300)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        try:
+            textes.append(pytesseract.image_to_string(img, lang="fra+eng"))
+        except Exception:
+            try:
+                textes.append(pytesseract.image_to_string(img, lang="fra"))
+            except Exception:
+                textes.append(pytesseract.image_to_string(img))
+    doc.close()
+    return "\n".join(textes).strip()
 
 
 def norme(t):
@@ -88,7 +140,7 @@ def facture_test_3():
     ])
 
 # ============================================================
-# 3. EXTRACTION PRO (par lignes + beaucoup plus de synonymes)
+# 3. EXTRACTION PRO
 # ============================================================
 # Regle d'or : jamais inventer. Introuvable = vide = "A verifier".
 
@@ -134,7 +186,6 @@ def extraire_dates_ligne(ligne):
 
 
 def _montant_sur_ligne(ligne):
-    """Dernier nombre non-pourcentage de la ligne = le montant (lecture humaine)."""
     ligne_sans_pourcent = re.sub(r"\d{1,2}(?:[.,]\d{1,2})?\s*%", "", ligne)
     for v in reversed(re.findall(NOMBRE, ligne_sans_pourcent)):
         n = _nombre(v)
@@ -144,15 +195,13 @@ def _montant_sur_ligne(ligne):
 
 
 def extraire_montant(t, etiquettes):
-    """Priorite aux libelles precis : on essaie 'total ttc' AVANT 'total' tout court.
-    Un 'total' generique ne peut jamais etre une ligne HT ou TVA."""
+    """Priorite aux libelles precis. Le 'total' generique ne touche jamais une ligne HT/TVA."""
     lignes = t.splitlines()
-    for etq in etiquettes:  # d'abord le libelle le plus precis
+    for etq in etiquettes:
         for i, ligne in enumerate(lignes):
             ln = norme(ligne)
             if not re.search(etq, ln):
                 continue
-            # le "total" generique ne doit jamais attraper une ligne HT / TVA
             if etq == r"\btotal\b" and re.search(r"ht\b|hors\s*taxe|subtotal|sous[- ]total|\btva\b|\bvat\b", ln):
                 continue
             v = _montant_sur_ligne(ligne)
@@ -222,11 +271,11 @@ def extraire_date_echeance(t):
     return None
 
 
-def extraire_fournisseur(texte):
-    lignes = [l.strip() for l in texte.splitlines() if l.strip()]
+def extraire_fournisseur(lignes):
     parasites = (r"facture|invoice|total|siret|tva|vat|date|adresse|client|page|tel|www|http|email|@",
                  r"rue|avenue|cite|street|harbor|bp |cedex|sarl|sas|sa\b|eurl|\d{4,}")
-    for l in lignes[:12]:
+    for l in lignes[:15]:
+        l = l.strip()
         ln = norme(l)
         if 3 <= len(l) <= 60 and not any(re.search(p, ln) for p in parasites):
             return l
@@ -347,7 +396,7 @@ def db_supprimer(numero, fournisseur):
                 c.execute("DELETE FROM factures WHERE id = ?", (i,))
 
 # ============================================================
-# 6. DESIGN - THEME SOMBRE CONFORTABLE
+# 6. DESIGN - THEME SOMBRE
 # ============================================================
 
 st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
@@ -355,20 +404,13 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    /* --- Fond general sombre et doux (pas noir pur, pas blanc) --- */
     .stApp {background: #101319;}
     .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
-
-    /* --- Texte principal : gris tres clair (confort des yeux) --- */
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
     [data-testid="stCaptionContainer"] {color: #d7dde6 !important;}
-
-    /* --- Barre laterale sombre --- */
     section[data-testid="stSidebar"] {background: #161a22; border-right: 1px solid #262c37;}
     section[data-testid="stSidebar"] * {color: #c9d1dc !important;}
-
-    /* --- Bandeau hero (indigo doux) --- */
     .hero {
         background: linear-gradient(115deg, #232057 0%, #3b34a8 55%, #4a44c4 100%);
         color: #fff; padding: 1.7rem 2.2rem; border-radius: 18px; margin-bottom: 1rem;
@@ -376,31 +418,23 @@ st.markdown("""
     }
     .hero h1 {color: #fff; margin: 0; font-size: 1.85rem; font-weight: 800; letter-spacing: -.5px;}
     .hero p {color: #cfd4ff; margin: .45rem 0 0 0; font-size: 1rem;}
-
-    /* --- Pastilles d'etapes (sombre) --- */
     .etapes span {
         display: inline-block; background: #1c2130; color: #a5b4fc; border: 1px solid #2c3350;
         border-radius: 20px; padding: .35rem .95rem; margin: .25rem .28rem 0 0;
         font-weight: 600; font-size: .9rem;
     }
-
-    /* --- Cartes / expanders sombres --- */
     div[data-testid="stExpander"] {
         border-radius: 14px; border: 1px solid #262c37; background: #161a22;
         box-shadow: 0 2px 10px rgba(0,0,0,.25); overflow: hidden;
     }
     div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #e3e8f0 !important;}
     div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #c9d1dc !important;}
-
-    /* --- Metriques --- */
     div[data-testid="stMetric"] {
         background: #161a22; border: 1px solid #262c37; border-radius: 14px; padding: .9rem;
         box-shadow: 0 2px 10px rgba(0,0,0,.25);
     }
     div[data-testid="stMetricLabel"] p {color: #93a0b4 !important;}
     div[data-testid="stMetricValue"] {color: #e8e4d8 !important;}
-
-    /* --- Boutons --- */
     .stButton > button {
         background: #1c2130; color: #e3e8f0; border: 1px solid #2c3350; border-radius: 10px;
     }
@@ -413,21 +447,13 @@ st.markdown("""
         background: #1c2130; color: #a5b4fc; border: 1px solid #2c3350; border-radius: 10px;
     }
     .stDownloadButton > button:hover {border-color: #4a44c4; color: #fff;}
-
-    /* --- Zone de depot de fichiers --- */
     div[data-testid="stFileUploader"] {
         border: 1.5px dashed #3a4166; border-radius: 14px; padding: .7rem; background: #141824;
     }
-
-    /* --- Tableaux : fond sombre --- */
     div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #161a22;}
-
-    /* --- Onglets --- */
-    .stTabs [data-baseweb="tab-list"] {gap: 4px;}
     .stTabs [data-baseweb="tab"] {color: #93a0b4; font-weight: 600;}
     .stTabs [data-baseweb="tab-highlight"] {background: #6366f1;}
     .stTabs [data-baseweb="tab"]:hover {color: #d7dde6;}
-
     hr {border-color: #262c37;}
 </style>
 """, unsafe_allow_html=True)
@@ -435,14 +461,14 @@ st.markdown("""
 st.markdown("""
 <div class="hero">
   <h1>🧾 Factures IA</h1>
-  <p>Lit tes factures PDF, vérifie les montants, détecte les doublons et prépare ta saisie comptable en quelques clics.</p>
+  <p>Lit tes factures PDF (même scannées), vérifie les montants, détecte les doublons et suis tes paiements.</p>
 </div>
 <div class="etapes">
   <span>1️⃣ Dépose tes PDF</span>
   <span>2️⃣ Vérifie les infos</span>
   <span>3️⃣ Corrige si besoin</span>
   <span>4️⃣ Ajoute au récapitulatif</span>
-  <span>5️⃣ Exporte en CSV / Excel</span>
+  <span>5️⃣ Exporte / suis les paiements</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -452,7 +478,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 7 · 100 % local · sauvegarde automatique")
+    st.caption("Version 9 · 100 % local · sauvegarde automatique")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -477,6 +503,17 @@ with st.sidebar:
                            use_container_width=True)
     st.divider()
 
+    with st.expander("🔍 OCR (factures scannées)"):
+        if HAS_OCR:
+            st.success("✅ OCR actif : les PDF scannés seront lus automatiquement.")
+        else:
+            st.markdown("Pour lire les **factures scannées** (images), installe Tesseract :")
+            st.code("py -m pip install pytesseract pillow", language="bash")
+            st.markdown("Puis télécharge l'installateur Tesseract (UB-Mannheim) sur :")
+            st.markdown("https://github.com/UB-Mannheim/tesseract/wiki")
+            st.markdown("Installe-le dans `C:\\Program Files\\Tesseract-OCR`, coche les langues "
+                        "« French » et « English », puis relance l'application.")
+
     with st.expander("❓ C'est quoi HT, TVA, TTC ?"):
         st.markdown("""
         - **HT** = *Hors Taxes* : le prix sans la taxe.
@@ -485,9 +522,6 @@ with st.sidebar:
 
         🧮 **Règle d'or : HT + TVA = TTC.**
         """)
-    with st.expander("📄 Quelles factures sont lisibles ?"):
-        st.markdown("- ✅ **PDF numériques** (texte sélectionnable) : parfait.\n"
-                    "- ⚠️ **Scans / photos** : illisibles pour l'instant — l'OCR (Tesseract) arrive plus tard.")
     with st.expander("🛡️ Où vont mes données ?"):
         st.markdown("Nulle part. Tout est traité **sur ton ordinateur** : "
                     "les factures validées sont sauvegardées dans le fichier `factures.db` du dossier de l'application, "
@@ -544,7 +578,7 @@ fichiers = None
 if page == "📄 Factures PDF":
     fichiers = st.file_uploader("📂 Dépose tes factures PDF",
                                 type=["pdf"], accept_multiple_files=True,
-                                help="Plusieurs PDF à la fois. Les PDF « numériques » fonctionnent le mieux.")
+                                help="PDF numériques ET scannés (si OCR installé). Plusieurs fichiers à la fois.")
 
 if page == "📄 Factures PDF":
     if not fichiers:
@@ -552,16 +586,35 @@ if page == "📄 Factures PDF":
 
     for f in fichiers:
         texte = lire_texte_pdf(f)
-        if texte is None:
-            st.error("Impossible d'ouvrir : " + f.name)
-            continue
-        if len(texte) < 40:
-            with st.expander("📄 " + f.name + " — scan détecté", expanded=False):
-                st.error("Ce PDF ne contient pas de texte lisible (probablement un scan ou une photo). "
-                         "L'étape OCR pour lire ces factures arrive dans une prochaine version.")
-            continue
+        methode = "texte du PDF"
 
-        t = norme(texte)
+        if not texte or len(texte) < 40:
+            # Pas de texte -> tentative OCR
+            if HAS_OCR:
+                try:
+                    with st.spinner("🔎 OCR en cours sur " + f.name + " (peut prendre 10-30 s)..."):
+                        texte = ocr_pdf(f)
+                    methode = "OCR (scan)"
+                except Exception:
+                    texte = None
+            if not texte or len(texte) < 40:
+                with st.expander("📄 " + f.name + " — illisible", expanded=False):
+                    if HAS_OCR:
+                        st.error("Même l'OCR n'a rien trouvé. La photo est peut-être trop sombre, "
+                                 "trop penchée ou de mauvaise qualité.")
+                    else:
+                        st.error("Ce PDF est un scan (pas de texte). Installe l'OCR : "
+                                 "menu de gauche → « 🔍 OCR (factures scannées) ».")
+                continue
+
+        # Extraction par position (reconstruit les vraies lignes visuelles)
+        lignes_vis = lignes_par_position(f)
+        if lignes_vis and len(lignes_vis) > 3:
+            texte_extraction = "\n".join(lignes_vis)
+        else:
+            texte_extraction = texte
+        t = norme(texte_extraction)
+
         ht = extraire_montant(t, [r"total\s*hors\s*taxes", r"total\s*ht", r"montant\s*ht",
                                   r"subtotal", r"sous[- ]total", r"\bht\b"])
         ttc = extraire_montant(t, [r"net\s*a\s*payer", r"total\s*(?:à|a)\s*payer", r"amount\s*due",
@@ -570,7 +623,7 @@ if page == "📄 Factures PDF":
         taux, montant_tva = extraire_tva(t)
 
         donnees = {
-            "Fournisseur": extraire_fournisseur(texte),
+            "Fournisseur": extraire_fournisseur(lignes_vis or texte.splitlines()),
             "N° facture": extraire_numero(t),
             "Date facture": extraire_date_facture(t),
             "Date échéance": extraire_date_echeance(t),
@@ -578,19 +631,20 @@ if page == "📄 Factures PDF":
             "Taux TVA (%)": taux,
             "Montant TVA": montant_tva,
             "Montant TTC": ttc,
-            "Devise": extraire_devise(t, texte),
+            "Devise": extraire_devise(t, texte_extraction),
             "Payée ?": "NON",
         }
 
         trouves = sum(1 for v in donnees.values() if v not in (None, ""))
         if trouves >= 7:
-            badge = "🟢 **" + str(trouves) + "/9 champs lus**"
+            badge = "🟢 **" + str(trouves) + "/10 champs lus**"
         elif trouves >= 4:
-            badge = "🟠 **" + str(trouves) + "/9 champs lus**"
+            badge = "🟠 **" + str(trouves) + "/10 champs lus**"
         else:
-            badge = "🔴 **" + str(trouves) + "/9 champs lus**"
+            badge = "🔴 **" + str(trouves) + "/10 champs lus**"
 
-        with st.expander("📄 " + f.name + "   " + badge, expanded=(len(fichiers) == 1)):
+        with st.expander("📄 " + f.name + "   " + badge + " · lecture : " + methode,
+                         expanded=(len(fichiers) == 1)):
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
             df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
                                        use_container_width=True)
@@ -664,16 +718,15 @@ if page == "📋 Récapitulatif":
                                           " — échéance dépassée depuis le " + str(d))
                 except ValueError:
                     pass
-        if en_retard:
-            for msg in en_retard:
-                st.error("🚨 **En retard de paiement** : " + msg)
-        elif len(impayees) > 0:
+        for msg in en_retard:
+            st.error("🚨 **En retard de paiement** : " + msg)
+        if not en_retard and len(impayees) > 0:
             st.success("✅ Aucune facture en retard de paiement.")
         if len(impayees) == 0 and len(df_recap) > 0:
             st.success("🎉 Toutes les factures sont payées !")
 
         # Barre de recherche
-        recherche = st.text_input("🔍 Rechercher (fournisseur, n° de facture, fichier...)", key="recherche_recap")
+        recherche = st.text_input("🔍 Rechercher (fournisseur, n° de facture, montant...)", key="recherche_recap")
         df_affiche = df_recap.copy()
         if recherche.strip():
             masque = df_affiche.astype(str).apply(
@@ -700,12 +753,29 @@ if page == "📋 Récapitulatif":
                 elif num_paye.strip():
                     st.warning("Aucune facture avec ce numéro.")
 
-        # Statistiques : total par fournisseur
+        # Statistiques par fournisseur
         with st.expander("📊 Statistiques par fournisseur"):
             stats = df_recap.groupby("Fournisseur")["Montant TTC"].agg(["count", "sum"])
             stats.columns = ["Nombre de factures", "Total TTC"]
             st.dataframe(stats.sort_values("Total TTC", ascending=False),
                          use_container_width=True)
+
+        # Graphique : factures par mois
+        with st.expander("📈 Montant TTC par mois"):
+            def _mois(d):
+                m = re.match(r"(\d{2})/(\d{2})/(\d{4})", str(d))
+                if m:
+                    return m.group(3) + "-" + m.group(2)
+                return None
+            df_mois = df_recap.copy()
+            df_mois["Mois"] = df_mois["Date facture"].apply(_mois)
+            df_mois = df_mois[df_mois["Mois"].notna()]
+            if not df_mois.empty:
+                par_mois = df_mois.groupby("Mois")["Montant TTC"].apply(
+                    lambda s: sum(_val(v) or 0 for v in s))
+                st.bar_chart(par_mois)
+            else:
+                st.caption("Ajoute des factures avec des dates valides pour voir le graphique.")
 
         st.dataframe(df_affiche, use_container_width=True, hide_index=True)
         st.caption("💡 Besoin d'enlever une ligne ? Utilise la suppression ci-dessous en donnant son numéro de facture.")
@@ -742,4 +812,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 7 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 9 · " + datetime.date.today().strftime("%d/%m/%Y"))
