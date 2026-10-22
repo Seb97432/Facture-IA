@@ -676,6 +676,37 @@ st.markdown("""
 
     .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
 
+    /* Texte noir dans les zones claires du contenu principal */
+    [data-testid="stAppViewContainer"] .main,
+    [data-testid="stAppViewContainer"] .main p,
+    [data-testid="stAppViewContainer"] .main label,
+    [data-testid="stAppViewContainer"] .main .stMarkdown,
+    [data-testid="stAppViewContainer"] .main .stMarkdown p,
+    [data-testid="stAppViewContainer"] .main .stMarkdown li,
+    [data-testid="stAppViewContainer"] .main [data-testid="stCaptionContainer"],
+    [data-testid="stAppViewContainer"] .main [data-testid="stAlert"] p,
+    [data-testid="stAppViewContainer"] .main [data-testid="stExpander"] summary,
+    [data-testid="stAppViewContainer"] .main [data-testid="stMetricLabel"],
+    [data-testid="stAppViewContainer"] .main [data-testid="stMetricValue"],
+    [data-testid="stAppViewContainer"] .main [data-testid="stMetricDelta"],
+    [data-testid="stAppViewContainer"] .main [data-testid="stDataFrame"],
+    [data-testid="stAppViewContainer"] .main [data-testid="stDataEditor"],
+    [data-testid="stAppViewContainer"] .main [data-baseweb="input"] input,
+    [data-testid="stAppViewContainer"] .main [data-baseweb="textarea"] textarea,
+    [data-testid="stAppViewContainer"] .main [data-baseweb="select"] div,
+    [data-testid="stAppViewContainer"] .main [data-testid="stFileUploader"] section,
+    [data-testid="stAppViewContainer"] .main [data-testid="stFileUploader"] small {
+        color: #111827 !important;
+    }
+
+    /* Les titres du bandeau gardent leur texte blanc */
+    [data-testid="stAppViewContainer"] .main .hero,
+    [data-testid="stAppViewContainer"] .main .hero h1 { color: #fff !important; }
+    [data-testid="stAppViewContainer"] .main .hero p { color: #e0e7ff !important; }
+
+    /* Le texte de la barre latérale garde sa couleur claire */
+    section[data-testid="stSidebar"] * { color: #E0E3E8 !important; }
+
     .hero {
 
         background: linear-gradient(115deg, #312e81 0%, #4f46e5 55%, #6366f1 100%);
