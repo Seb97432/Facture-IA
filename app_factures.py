@@ -706,6 +706,23 @@ st.markdown("""
 
     }
 
+    /* Les boutons de navigation restent bien cliquables. */
+    section[data-testid="stSidebar"] .stButton > button {
+        width: 100%; text-align: left; border-radius: 10px;
+        border: 1px solid #4B515B; background: #30343B;
+        color: #FFFFFF !important; font-weight: 600;
+    }
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        border-color: #A5B4FC; background: #3B4050;
+    }
+    /* Texte noir uniquement dans les encadrés clairs demandés. */
+    section[data-testid="stSidebar"] div[data-testid="stExpander"] {
+        background: #FFFFFF !important;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stExpander"] * {
+        color: #111111 !important;
+    }
+
     div[data-testid="stExpander"] {
 
         border-radius: 14px; border: 1px solid #e2e8f0; background: #fff;
@@ -784,21 +801,24 @@ st.markdown("""
 
 </div>
 
-<div class="etapes">
-
-  <span>1️⃣ Dépose tes PDF</span>
-
-  <span>2️⃣ Vérifie les infos</span>
-
-  <span>3️⃣ Corrige si besoin</span>
-
-  <span>4️⃣ Ajoute au récapitulatif</span>
-
-  <span>5️⃣ Exporte en CSV / Excel</span>
-
 </div>
 
 """, unsafe_allow_html=True)
+
+# Les 5 étapes de l'accueil sont de vrais boutons, pas de simples étiquettes.
+_etapes = st.columns(5)
+_actions_etapes = [
+    ("1️⃣ Déposer PDF", "📄 Factures PDF"),
+    ("2️⃣ Vérifier", "📄 Factures PDF"),
+    ("3️⃣ Corriger", "📄 Factures PDF"),
+    ("4️⃣ Récapitulatif", "📋 Récapitulatif"),
+    ("5️⃣ Exporter", "📋 Récapitulatif"),
+]
+for _col, (_label, _destination) in zip(_etapes, _actions_etapes):
+    with _col:
+        if st.button(_label, key="accueil_" + _label, use_container_width=True):
+            st.session_state["navigation_page"] = _destination
+            st.rerun()
 
 
 
@@ -819,12 +839,18 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### 🧭 Navigation")
-    page = st.radio(
-        "Choisir une page",
-        ["🏠 Tableau de bord", "📄 Factures PDF", "📋 Récapitulatif"],
-        key="navigation_page",
-        label_visibility="collapsed",
-    )
+    _pages = ["🏠 Tableau de bord", "📄 Factures PDF", "📋 Récapitulatif"]
+    if "navigation_page" not in st.session_state:
+        st.session_state["navigation_page"] = _pages[0]
+    for _destination in _pages:
+        if st.button(
+            ("● " if st.session_state["navigation_page"] == _destination else "　") + _destination,
+            key="nav_" + _destination,
+            use_container_width=True,
+        ):
+            st.session_state["navigation_page"] = _destination
+            st.rerun()
+    page = st.session_state["navigation_page"]
     st.divider()
 
 
