@@ -166,11 +166,13 @@ def extraire_montant(t, etiquettes):
 
 
 def extraire_numero(t):
+    """Version blindee : chaque ecriture possible du numero est testee, ligne par ligne."""
     motifs = [
-        r"(?:facture|invoice)\s*(?:n[.o]?|no|number|#|ref|reference)?\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
-        r"no\s*de\s*facture\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
-        r"facture\s*[:#]\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
-        r"invoice\s*#\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
+        r"facture\s*(?:n\.?\s*o?\.?|no\.?|numero|number|#)\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
+        r"numero\s*(?:de\s*)?facture\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
+        r"no\s*de\s*facture\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
+        r"facture\s*[:#]\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
+        r"invoice\s*(?:no|number|#)?\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
     ]
     for ligne in t.splitlines():
         ln = norme(ligne)
@@ -180,7 +182,7 @@ def extraire_numero(t):
             m = re.search(motif, ln)
             if m:
                 candidat = m.group(1).strip(" :.-#")
-                if candidat and candidat.lower() not in ("de", "du", "client"):
+                if candidat and len(candidat) >= 2 and candidat.lower() not in ("de", "du", "client", "no", "la"):
                     return candidat.upper()
     return None
 
@@ -499,7 +501,7 @@ if "recap" not in st.session_state:
     st.session_state["recap"] = db_charger()
 
 CHAMPS = ["Fournisseur", "N° facture", "Date facture", "Date échéance",
-          "Montant HT", "Taux TVA (%)", "Montant TVA", "Montant TTC", "Devise"]
+          "Montant HT", "Taux TVA (%)", "Montant TVA", "Montant TTC", "Devise", "Payée ?"]
 EXPLIQUES = {
     "Fournisseur": "L'entreprise qui a envoyé la facture",
     "N° facture": "Le numéro unique écrit sur la facture",
@@ -510,6 +512,7 @@ EXPLIQUES = {
     "Montant TVA": "Le montant de la taxe",
     "Montant TTC": "Le total à payer, taxes comprises",
     "Devise": "EUR, USD...",
+    "Payée ?": "OUI si la facture a été payée, NON sinon",
 }
 
 
@@ -576,6 +579,7 @@ if page == "📄 Factures PDF":
             "Montant TVA": montant_tva,
             "Montant TTC": ttc,
             "Devise": extraire_devise(t, texte),
+            "Payée ?": "NON",
         }
 
         trouves = sum(1 for v in donnees.values() if v not in (None, ""))
@@ -636,14 +640,74 @@ if page == "📋 Récapitulatif":
     else:
         df_recap = pd.DataFrame(st.session_state["recap"], columns=CHAMPS)
         st.markdown("### 📋 " + str(len(st.session_state["recap"])) + " facture(s) enregistrée(s)")
-        m1, m2, m3 = st.columns(3)
+        m1, m2, m3, m4 = st.columns(4)
         tot_ht = sum(_val(v) or 0 for v in df_recap["Montant HT"])
         tot_tva = sum(_val(v) or 0 for v in df_recap["Montant TVA"])
         tot_ttc = sum(_val(v) or 0 for v in df_recap["Montant TTC"])
+        impayees = df_recap[df_recap["Payée ?"].astype(str).str.upper() != "OUI"]
         m1.metric("Total HT", str(round(tot_ht, 2)))
         m2.metric("Total TVA", str(round(tot_tva, 2)))
         m3.metric("Total TTC", str(round(tot_ttc, 2)))
-        st.dataframe(df_recap, use_container_width=True, hide_index=True)
+        m4.metric("Reste à payer", str(round(sum(_val(v) or 0 for v in impayees["Montant TTC"]), 2)))
+
+        # Alertes de retard de paiement
+        aujourdhui = datetime.date.today()
+        en_retard = []
+        for _, r in impayees.iterrows():
+            d = r.get("Date échéance", "")
+            m = re.match(r"(\d{2})/(\d{2})/(\d{4})", str(d))
+            if m:
+                try:
+                    ech = datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+                    if ech < aujourdhui:
+                        en_retard.append(str(r.get("Fournisseur", "?")) + " n° " + str(r.get("N° facture", "?")) +
+                                          " — échéance dépassée depuis le " + str(d))
+                except ValueError:
+                    pass
+        if en_retard:
+            for msg in en_retard:
+                st.error("🚨 **En retard de paiement** : " + msg)
+        elif len(impayees) > 0:
+            st.success("✅ Aucune facture en retard de paiement.")
+        if len(impayees) == 0 and len(df_recap) > 0:
+            st.success("🎉 Toutes les factures sont payées !")
+
+        # Barre de recherche
+        recherche = st.text_input("🔍 Rechercher (fournisseur, n° de facture, fichier...)", key="recherche_recap")
+        df_affiche = df_recap.copy()
+        if recherche.strip():
+            masque = df_affiche.astype(str).apply(
+                lambda col: col.str.contains(recherche.strip(), case=False, regex=False, na=False)
+            ).any(axis=1)
+            df_affiche = df_affiche[masque]
+            st.caption(str(len(df_affiche)) + " facture(s) trouvée(s) sur " + str(len(df_recap)) + ".")
+
+        # Marquer payee / non payee
+        with st.expander("✅ Marquer une facture comme payée / non payée"):
+            c_num, c_etat, c_ok = st.columns([2, 1, 1])
+            num_paye = c_num.text_input("N° de facture", key="num_paye")
+            nouvel_etat = c_etat.selectbox("Nouvel état", ["OUI", "NON"], key="etat_paye")
+            if c_ok.button("Mettre à jour", key="btn_paye"):
+                cible = [r for r in st.session_state["recap"]
+                         if str(r.get("N° facture", "")).upper() == num_paye.strip().upper()]
+                if cible:
+                    maj = dict(cible[0])
+                    maj["Payée ?"] = nouvel_etat
+                    db_remplacer_numero(cible[0], maj)
+                    st.session_state["recap"] = db_charger()
+                    st.success("Facture " + num_paye + " → " + nouvel_etat)
+                    st.rerun()
+                elif num_paye.strip():
+                    st.warning("Aucune facture avec ce numéro.")
+
+        # Statistiques : total par fournisseur
+        with st.expander("📊 Statistiques par fournisseur"):
+            stats = df_recap.groupby("Fournisseur")["Montant TTC"].agg(["count", "sum"])
+            stats.columns = ["Nombre de factures", "Total TTC"]
+            st.dataframe(stats.sort_values("Total TTC", ascending=False),
+                         use_container_width=True)
+
+        st.dataframe(df_affiche, use_container_width=True, hide_index=True)
         st.caption("💡 Besoin d'enlever une ligne ? Utilise la suppression ci-dessous en donnant son numéro de facture.")
 
         c1, c2, c3 = st.columns(3)
