@@ -462,7 +462,8 @@ def extraire_tva(t):
 
             pass
 
-    montant = extraire_montant(t, [r"montant\s*(?:de\s*)?tva", r"\btva\b", r"\bvat\b"])
+    montant = extraire_montant(t, [r"montant\s*(?:de\s*)?tva", r"montant\s*(?:de\s*)?vat",
+                                   r"\btva\b", r"\bvat\b"])
 
     return taux, montant
 
