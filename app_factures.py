@@ -232,7 +232,7 @@ def _date_std(d):
 
         return None
 
-    m = re.match(r"(\d{1,2})[/.-]\(\d{1,2})[/.-]\(\d{2,4})", d)
+    m = re.match(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})", d)
 
     if not m:
 
