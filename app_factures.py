@@ -28,15 +28,44 @@ except Exception:
 # 1. OUTILS DE BASE
 # ============================================================
 
+
+
 @st.cache_data(show_spinner=False)
 def lire_texte_pdf(fichier):
+    doc = None
     try:
-        doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
-        texte = "\n".join(page.get_text() for page in doc)
-        doc.close()
-        return texte.strip()
+        doc = pymupdf.open(
+            stream=fichier.getvalue(),
+            filetype="pdf"
+        )
+
+        texte = "\n".join(page.get_text() for page in doc).strip()
+
+        if len(texte) >= 40:
+            return texte
+
+        import pytesseract
+        from PIL import Image
+        import io
+
+        pages_ocr = []
+        for page in doc:
+            pix = page.get_pixmap(dpi=200)
+            image = Image.open(io.BytesIO(pix.tobytes("png")))
+
+            texte_page = pytesseract.image_to_string(
+                image,
+                lang="fra+eng"
+            )
+            pages_ocr.append(texte_page)
+
+        return "\n".join(pages_ocr).strip()
+
     except Exception:
         return None
+    finally:
+        if doc is not None:
+            doc.close()
 
 
 @st.cache_data(show_spinner=False)
