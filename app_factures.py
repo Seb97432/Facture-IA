@@ -144,10 +144,17 @@ def _montant_sur_ligne(ligne):
 
 
 def extraire_montant(t, etiquettes):
+    """Priorite aux libelles precis : on essaie 'total ttc' AVANT 'total' tout court.
+    Un 'total' generique ne peut jamais etre une ligne HT ou TVA."""
     lignes = t.splitlines()
-    for i, ligne in enumerate(lignes):
-        ln = norme(ligne)
-        if any(re.search(e, ln) for e in etiquettes):
+    for etq in etiquettes:  # d'abord le libelle le plus precis
+        for i, ligne in enumerate(lignes):
+            ln = norme(ligne)
+            if not re.search(etq, ln):
+                continue
+            # le "total" generique ne doit jamais attraper une ligne HT / TVA
+            if etq == r"\btotal\b" and re.search(r"ht\b|hors\s*taxe|subtotal|sous[- ]total|\btva\b|\bvat\b", ln):
+                continue
             v = _montant_sur_ligne(ligne)
             if v is not None:
                 return v
@@ -162,7 +169,8 @@ def extraire_numero(t):
     motifs = [
         r"(?:facture|invoice)\s*(?:n[.o]?|no|number|#|ref|reference)?\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
         r"no\s*de\s*facture\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
-        r"(?:ref|reference)\s*(?:facture)?\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]{2,})",
+        r"facture\s*[:#]\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
+        r"invoice\s*#\s*([A-Za-z0-9][A-Za-z0-9./_-]{1,})",
     ]
     for ligne in t.splitlines():
         ln = norme(ligne)
