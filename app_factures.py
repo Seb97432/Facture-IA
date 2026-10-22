@@ -215,24 +215,34 @@ def extraire_montant(t, etiquettes):
 
 
 def extraire_numero(t):
-    """Version blindee : chaque ecriture possible du numero est testee, ligne par ligne."""
+    """Extrait le numéro de facture avec plusieurs formats de libellés."""
+
     motifs = [
-        r"facture\s*(?:n\.?\s*o?\.?|no\.?|numero|number|#)\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
-        r"numero\s*(?:de\s*)?facture\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
-        r"no\s*de\s*facture\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
-        r"facture\s*[:#]\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
-        r"invoice\s*(?:no|number|#)?\s*[:#.]?\s*([A-Za-z0-9][A-Za-z0-9./_-]+)",
+        r"\bfacture\s*(?:n\s*[°ºo.]|numero|number|#)\s*[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bnumero\s+(?:de\s+)?facture\s*[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bn\s*[°ºo.]?\s*(?:de\s+)?facture\s*[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bfacture\s*[:：]\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\binvoice\s*(?:(?:no|number|n°|#)\s*)?[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
     ]
+
     for ligne in t.splitlines():
         ln = norme(ligne)
+
         if "date" in ln:
             continue
+
         for motif in motifs:
-            m = re.search(motif, ln)
+            m = re.search(motif, ln, flags=re.IGNORECASE)
+
             if m:
                 candidat = m.group(1).strip(" :.-#")
-                if candidat and len(candidat) >= 2 and candidat.lower() not in ("de", "du", "client", "no", "la"):
+
+                if (
+                    len(candidat) >= 2
+                    and candidat.lower() not in ("de", "du", "client", "no", "la")
+                ):
                     return candidat.upper()
+
     return None
 
 
