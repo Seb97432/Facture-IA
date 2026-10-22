@@ -1053,13 +1053,14 @@ if page == "📄 Factures PDF":
 
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
 
-            df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
-
-                                       use_container_width=True,
-
-                                       column_config={c: st.column_config.TextColumn(help=EXPLIQUES[c])
-
-                                                     for c in CHAMPS})
+            # Editeur simple et compatible : évite les erreurs de configuration
+            # de colonnes lorsque les montants extraits sont numériques.
+            df_corrige = st.data_editor(
+                df,
+                num_rows="fixed",
+                key="ed_" + f.name,
+                use_container_width=True,
+            )
 
 
 
