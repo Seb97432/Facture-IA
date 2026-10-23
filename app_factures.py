@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v22 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v23 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
@@ -823,6 +823,44 @@ def auth_verifier_code(email, code):
             "email": str(d.get("user", {}).get("email", email))}, None
 
 
+def auth_oublie(email):
+    """Mot de passe oublie : Supabase envoie un code de recuperation
+    (aleatoire, different a chaque fois) dans la boite mail."""
+    url, key = _cloud_config()
+    r = requests.post(url + "/auth/v1/recover",
+                      headers={"apikey": key},
+                      json={"email": email.strip()}, timeout=20)
+    if r.status_code != 200:
+        return "Envoi impossible pour cette adresse."
+    return None
+
+
+def auth_recuperer(email, code, nouveau_mdp):
+    """Verifie le code de recuperation puis definie un NOUVEAU mot de
+    passe. Retourne (session, None) ou (None, message)."""
+    url, key = _cloud_config()
+    r = requests.post(url + "/auth/v1/verify",
+                      headers={"apikey": key},
+                      json={"type": "recovery", "email": email.strip(),
+                            "token": code.strip()},
+                      timeout=20)
+    if r.status_code != 200:
+        return None, "Code incorrect ou expiré. Regarde bien le mail le plus récent."
+    d = r.json()
+    token = d.get("access_token")
+    if not token or not d.get("user", {}).get("id"):
+        return None, "Récupération refusée par Supabase."
+    # modification du mot de passe avec le jeton de recuperation
+    r2 = requests.put(url + "/auth/v1/user",
+                       headers={"apikey": key, "Authorization": "Bearer " + token,
+                                "Content-Type": "application/json"},
+                       json={"password": nouveau_mdp}, timeout=20)
+    if r2.status_code != 200:
+        return None, "Code accepté mais nouveau mot de passe refusé (trop court ?)."
+    return {"token": token, "id": str(d["user"]["id"]),
+            "email": str(d.get("user", {}).get("email", email))}, None
+
+
 def _session():
     """La session de l'utilisateur connecte (ou None si personne ne
     l'est). Stockee dans st.session_state, donc propre a CE navigateur."""
@@ -1196,7 +1234,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 22 · IA d'OR 🏆")
+    st.caption("Version 23 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1210,19 +1248,64 @@ with st.sidebar:
             st.markdown("### 🔐 Ton compte")
             onglet_co, onglet_inscrit = st.tabs(["Se connecter", "Créer un compte"])
             with onglet_co:
-                email_co = st.text_input("Email", key="email_co")
-                mdp_co = st.text_input("Mot de passe", type="password", key="mdp_co")
-                if st.button("Se connecter", key="btn_connexion", use_container_width=True):
-                    if not email_co.strip() or not mdp_co:
-                        st.warning("Écris ton email et ton mot de passe.")
-                    else:
-                        session, err = auth_connexion(email_co, mdp_co)
-                        if session:
-                            st.session_state["session_utilisateur"] = session
-                            st.session_state["recap"] = db_charger()
-                            st.rerun()
+                etape_oublie = st.session_state.get("oublie_attente")
+                if not etape_oublie:
+                    email_co = st.text_input("Email", key="email_co")
+                    mdp_co = st.text_input("Mot de passe", type="password", key="mdp_co")
+                    if st.button("Se connecter", key="btn_connexion", use_container_width=True):
+                        if not email_co.strip() or not mdp_co:
+                            st.warning("Écris ton email et ton mot de passe.")
                         else:
-                            st.error(err)
+                            session, err = auth_connexion(email_co, mdp_co)
+                            if session:
+                                st.session_state["session_utilisateur"] = session
+                                st.session_state["recap"] = db_charger()
+                                st.rerun()
+                            else:
+                                st.error(err)
+                    if st.button("🔑 Mot de passe oublié ?", key="btn_oublie",
+                                 use_container_width=True):
+                        if not email_co.strip():
+                            st.warning("Écris d'abord ton email juste au-dessus.")
+                        else:
+                            err = auth_oublie(email_co)
+                            if err:
+                                st.error(err)
+                            else:
+                                st.session_state["oublie_attente"] = email_co.strip()
+                                st.rerun()
+                else:
+                    # RECUPERATION : code recu par mail + nouveau mot de passe
+                    st.success("🔑 Un **code à 6 chiffres** a été envoyé à **" +
+                               etape_oublie + "** (regarde aussi les spams).")
+                    code_r = st.text_input("Code reçu par mail", key="code_recup")
+                    mdp_n1 = st.text_input("Nouveau mot de passe (8 caractères ou plus)",
+                                           type="password", key="mdp_n1")
+                    mdp_n2 = st.text_input("Confirme le nouveau mot de passe",
+                                           type="password", key="mdp_n2")
+                    if st.button("✅ Réinitialiser mon mot de passe",
+                                 key="btn_reset_mdp", use_container_width=True,
+                                 type="primary"):
+                        if not code_r.strip() or not mdp_n1:
+                            st.warning("Écris le code et le nouveau mot de passe.")
+                        elif mdp_n1 != mdp_n2:
+                            st.warning("Les deux mots de passe ne sont pas identiques.")
+                        elif len(mdp_n1) < 8:
+                            st.warning("Mot de passe trop court (minimum 8).")
+                        else:
+                            session, err = auth_recuperer(etape_oublie, code_r, mdp_n1)
+                            if session:
+                                st.session_state.pop("oublie_attente", None)
+                                st.session_state["session_utilisateur"] = session
+                                st.session_state["recap"] = db_charger()
+                                st.success("✅ Mot de passe modifié, tu es connecté.")
+                                st.rerun()
+                            else:
+                                st.error(err)
+                    if st.button("❌ Annuler la récupération", key="btn_annuler_oublie",
+                                 use_container_width=True):
+                        st.session_state.pop("oublie_attente", None)
+                        st.rerun()
             with onglet_inscrit:
                 etape_inscrit = st.session_state.get("inscription_attente")
                 if not etape_inscrit:
@@ -2458,4 +2541,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 22 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 23 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
