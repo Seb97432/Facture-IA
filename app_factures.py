@@ -782,8 +782,9 @@ def auth_connexion(email, motdepasse):
 
 
 def auth_inscription(email, motdepasse):
-    """Cree un compte. Retourne (session, None) ou (None, message).
-    Si Supabase exige une confirmation par email, on le dit clairement."""
+    """Cree un compte. Supabase envoie alors un CODE A 6 CHIFFRES
+    (aleatoire, different a chaque fois) dans la boite mail.
+    On ne se connecte qu'apres avoir entre ce code (auth_verifier_code)."""
     url, key = _cloud_config()
     r = requests.post(url + "/auth/v1/signup",
                       headers={"apikey": key},
@@ -797,11 +798,29 @@ def auth_inscription(email, motdepasse):
         return None, "Inscription impossible : " + str(msg)
     d = r.json()
     if d.get("access_token") and d.get("user", {}).get("id"):
+        # cas rare : confirmation desactivee cote Supabase -> deja connecte
         return {"token": d["access_token"], "id": str(d["user"]["id"]),
                 "email": str(d.get("user", {}).get("email", email))}, None
-    # compte cree mais email non confirme
-    return None, ("📧 Compte créé. Va dans ta boîte mail et clique sur le lien "
-                   "de confirmation, puis connecte-toi ici.")
+    # compte cree : il faut maintenant le code recu par mail
+    return "code_a_confirmer", None
+
+
+def auth_verifier_code(email, code):
+    """Verifie le code a 6 chiffres recu par mail et ouvre la session.
+    Retourne (session, None) ou (None, message)."""
+    url, key = _cloud_config()
+    r = requests.post(url + "/auth/v1/verify",
+                      headers={"apikey": key},
+                      json={"type": "signup", "email": email.strip(),
+                            "token": code.strip()},
+                      timeout=20)
+    if r.status_code != 200:
+        return None, "Code incorrect ou expiré. Regarde bien le mail le plus récent."
+    d = r.json()
+    if not d.get("access_token") or not d.get("user", {}).get("id"):
+        return None, "Confirmation refusée par Supabase."
+    return {"token": d["access_token"], "id": str(d["user"]["id"]),
+            "email": str(d.get("user", {}).get("email", email))}, None
 
 
 def _session():
@@ -1205,27 +1224,71 @@ with st.sidebar:
                         else:
                             st.error(err)
             with onglet_inscrit:
-                email_in = st.text_input("Email", key="email_in")
-                mdp_in = st.text_input("Mot de passe (12 caractères ou plus, jamais réutilisé)",
-                                       type="password", key="mdp_in")
-                mdp_in2 = st.text_input("Confirme le mot de passe", type="password", key="mdp_in2")
-                if st.button("Créer mon compte", key="btn_inscription", use_container_width=True):
-                    if not email_in.strip() or not mdp_in:
-                        st.warning("Écris ton email et un mot de passe.")
-                    elif mdp_in != mdp_in2:
-                        st.warning("Les deux mots de passe ne sont pas identiques.")
-                    elif "@" not in email_in:
-                        st.warning("Cette adresse email ne semble pas valide.")
-                    elif len(mdp_in) < 8:
-                        st.warning("Mot de passe trop court (minimum 8, idéalement 12+).")
-                    else:
-                        session, err = auth_inscription(email_in, mdp_in)
-                        if session:
-                            st.session_state["session_utilisateur"] = session
-                            st.session_state["recap"] = db_charger()
-                            st.rerun()
+                etape_inscrit = st.session_state.get("inscription_attente")
+                if not etape_inscrit:
+                    email_in = st.text_input("Email", key="email_in")
+                    mdp_in = st.text_input("Mot de passe (12 caractères ou plus, jamais réutilisé)",
+                                           type="password", key="mdp_in")
+                    mdp_in2 = st.text_input("Confirme le mot de passe", type="password", key="mdp_in2")
+                    if st.button("Créer mon compte", key="btn_inscription", use_container_width=True):
+                        if not email_in.strip() or not mdp_in:
+                            st.warning("Écris ton email et un mot de passe.")
+                        elif mdp_in != mdp_in2:
+                            st.warning("Les deux mots de passe ne sont pas identiques.")
+                        elif "@" not in email_in:
+                            st.warning("Cette adresse email ne semble pas valide.")
+                        elif len(mdp_in) < 8:
+                            st.warning("Mot de passe trop court (minimum 8, idéalement 12+).")
                         else:
-                            st.info(err)
+                            session, err = auth_inscription(email_in, mdp_in)
+                            if session == "code_a_confirmer":
+                                # ETAPE 1 : compte cree, Supabase a envoye le code par mail
+                                st.session_state["inscription_attente"] = email_in.strip()
+                                st.rerun()
+                            elif session:
+                                st.session_state["session_utilisateur"] = session
+                                st.session_state["recap"] = db_charger()
+                                st.rerun()
+                            else:
+                                st.error(err)
+                else:
+                    # ETAPE 2 : l'utilisateur entre le code recu par mail
+                    st.success("📧 Compte créé ! Un **code à 6 chiffres** vient d'être "
+                               "envoyé à **" + etape_inscrit + "** (regarde aussi les "
+                               "spams). Il est aléatoire et différent à chaque envoi.")
+                    code_in = st.text_input("Entre le code à 6 chiffres reçu par mail",
+                                            key="code_in")
+                    if st.button("✅ Confirmer mon compte", key="btn_confirmer_code",
+                                 use_container_width=True, type="primary"):
+                        if not code_in.strip():
+                            st.warning("Écris le code reçu par mail.")
+                        else:
+                            session, err = auth_verifier_code(etape_inscrit, code_in)
+                            if session:
+                                st.session_state.pop("inscription_attente", None)
+                                st.session_state["session_utilisateur"] = session
+                                st.session_state["recap"] = db_charger()
+                                st.success("🎉 Compte confirmé, bienvenue !")
+                                st.rerun()
+                            else:
+                                st.error(err)
+                    c_re1, c_re2 = st.columns(2)
+                    if c_re1.button("📧 Renvoyer le code", key="btn_renvoyer_code",
+                                    use_container_width=True):
+                        try:
+                            url_s, key_s = _cloud_config()
+                            requests.post(url_s + "/auth/v1/resend",
+                                          headers={"apikey": key_s},
+                                          json={"type": "signup", "email": etape_inscrit},
+                                          timeout=20)
+                            st.success("Un nouveau code t'a été envoyé par mail "
+                                       "(l'ancien ne fonctionne plus).")
+                        except Exception:
+                            st.warning("Envoi impossible pour l'instant, réessaie.")
+                    if c_re2.button("❌ Annuler", key="btn_annuler_inscrit",
+                                    use_container_width=True):
+                        st.session_state.pop("inscription_attente", None)
+                        st.rerun()
     else:
         st.caption("💾 Sauvegarde locale (SQLite) — mode sans compte")
     if st.session_state.get("erreur_cloud"):
@@ -1350,9 +1413,13 @@ with st.sidebar:
         (nom libre, ex. `factures-ia`, mot de passe fort, région Europe).
 
         **2.** Dans Supabase → **Authentication → Providers** : vérifie que
-        **Email** est activé (c'est le cas par défaut). Conseillé pour toi :
-        **Authentication → Settings → désactive « Confirm email »** pour que
-        les comptes soient utilisables immédiatement.
+        **Email** est activé (c'est le cas par défaut). Puis dans
+        **Authentication → Sign Ups**, laisse **« Confirm email » ACTIVÉ** :
+        c'est ce qui envoie le code à 6 chiffres à chaque inscription.
+        Vérifie aussi dans **Authentication → Email Templates** →
+        « Confirm signup » que le message contient `{{ .Token }}`
+        (le code) — c'est le cas par défaut. Ne mets jamais
+        `{{ .ConfirmationURL }}`... si tu préfères le code, garde `{{ .Token }}`.
 
         **3.** Dans **SQL Editor**, colle ce code et clique sur *Run* :""")
         st.code("""create table if not exists factures (
