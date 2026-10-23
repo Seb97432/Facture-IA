@@ -738,19 +738,20 @@ BDD = os.path.join(DOSSIER, "factures.db")
 
 
 def _cloud_config():
-    """Lit la configuration Supabase depuis les Secrets Streamlit."""
+    """Lit la configuration Supabase dans les Secrets Streamlit.
+    Retourne (url, key, utilisateur) ou None si rien n'est configure.
+    Les secrets ne sont JAMAIS affiches ni ecrits dans le code."""
     try:
         conf = st.secrets["factures_ia"]
-        url = str(conf["supabase_url"]).strip().rstrip("/")
-        key = str(conf["supabase_key"]).strip()
-        utilisateur = str(conf.get("utilisateur", "proprietaire")).strip()
-
+        url = str(conf.get("supabase_url", "")).strip().rstrip("/")
+        key = str(conf.get("supabase_key", "")).strip()
+        utilisateur = str(conf.get("utilisateur", "proprietaire")).strip() or "proprietaire"
         if url and key:
             return url, key, utilisateur
-    except Exception as e:
-        st.warning(f"Configuration Supabase indisponible : {e}")
-
+    except Exception:
+        pass
     return None
+
 
 def _cloud_actif():
     """True si Supabase est configure ET que 'requests' est disponible."""
@@ -847,15 +848,9 @@ def cloud_charger():
 
 def cloud_ajouter(ligne):
     _, _, utilisateur = _cloud_config()
-    _sb_requete(
-        "POST",
-        "/facture",
-        donnees={
-            "utilisateur": utilisateur,
-            "donnees": ligne,
-            "date_ajout": datetime.date.today().isoformat()
-        }
-    )
+    _sb_requete("POST", "/rest/v1/factures",
+                donnees={"utilisateur": utilisateur, "donnees": ligne,
+                         "date_ajout": datetime.date.today().isoformat()})
 
 
 def cloud_tout_pour_utilisateur():
@@ -948,7 +943,7 @@ def db_vider():
         try:
             cloud_vider()
         except Exception as e:
-            st.error(f"Erreur Supabase : {e}")
+            st.session_state["erreur_cloud"] = str(e)[:200]
 
 
 def db_supprimer(numero, fournisseur):
@@ -1044,6 +1039,32 @@ st.markdown("""
     .stTabs [data-baseweb="tab-highlight"] {background: #6366f1;}
     .stTabs [data-baseweb="tab"]:hover {color: #d7dde6;}
     hr {border-color: #262c37;}
+
+/* ---- v21 : cartes KPI premium ---- */
+.carte-kpi {
+    background: #161a22; border: 1px solid #262c37; border-radius: 14px;
+    padding: .95rem 1rem; text-align: center; height: 100%;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+}
+.carte-kpi .kpi-lib {color: #93a0b4; font-size: .82rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
+.carte-kpi .kpi-val {color: #e8e4d8; font-size: 1.45rem; font-weight: 800;}
+.carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #4ade80;}
+.carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #fbbf24;}
+.carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #f87171;}
+.carte-kpi.bleu {border-color: #2c3350;}   .carte-kpi.bleu .kpi-val {color: #a5b4fc;}
+
+/* ---- v21 : confort sur telephone ---- */
+@media (max-width: 640px) {
+    .block-container {padding: .7rem .8rem 2rem .8rem; max-width: 100%;}
+    .hero {padding: 1.1rem 1.2rem; border-radius: 14px;}
+    .hero h1 {font-size: 1.35rem;}
+    .hero p {font-size: .88rem;}
+    .etapes span {font-size: .78rem; padding: .3rem .6rem;}
+    .carte-kpi .kpi-val {font-size: 1.15rem;}
+    section[data-testid="stSidebar"] {background: #101319;}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1061,7 +1082,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
 # ============================================================
 # 7. SIDEBAR
 # ============================================================
@@ -1069,39 +1089,28 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("Version 20 · IA d'OR 🏆")
-
     if _cloud_actif():
         _, _, utilisateur = _cloud_config()
-        st.caption(
-            "☁️ Sauvegarde permanente active (utilisateur : "
-            + utilisateur + ")"
-        )
+        st.caption("☁️ Sauvegarde permanente active (utilisateur : " + utilisateur + ")")
     else:
         st.caption("💾 Sauvegarde locale (SQLite)")
-
     if st.session_state.get("erreur_cloud"):
+        st.error("⚠️ Problème de connexion à la sauvegarde en ligne : les données ont été "
+                 "gardées en local. Détail : " + str(st.session_state["erreur_cloud"]))
         if st.button("🔄 Réessayer maintenant", key="btn_reessayer_cloud"):
             st.session_state.pop("erreur_cloud", None)
             st.rerun()
-
     st.divider()
 
     st.markdown("### 🧭 Navigation")
     page = st.radio(
         "Choisir une page",
-        [
-            "🏠 Tableau de bord",
-            "📄 Factures PDF",
-            "💰 Paiements",
-            "📤 Pour le comptable",
-            "🤖 Assistant",
-            "📋 Récapitulatif",
-        ],
+        ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
+         "📤 Pour le comptable", "🤖 Assistant", "📋 Récapitulatif"],
         key="navigation_page",
         label_visibility="collapsed",
     )
     st.divider()
-
 
     with st.expander("🗂️ Factures de test (clique ici)"):
         st.markdown("Télécharge ces 3 PDF **différents**, puis dépose-les dans l'application :")
@@ -1501,17 +1510,26 @@ if page == "🏠 Tableau de bord":
         st.info("Aucune facture enregistrée pour le moment. Ouvre « 📄 Factures PDF » dans le menu de gauche pour commencer.")
     else:
         df_dashboard = pd.DataFrame(st.session_state["recap"], columns=CHAMPS)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Factures enregistrées", len(df_dashboard))
-        c2.metric("Total HT", str(round(sum(_val(v) or 0 for v in df_dashboard["Montant HT"]), 2)))
-        c3.metric("Total TTC", str(round(sum(_val(v) or 0 for v in df_dashboard["Montant TTC"]), 2)))
-        c4.metric("Fournisseurs différents", df_dashboard["Fournisseur"].nunique())
-        # v18 : vue paiements directement sur le tableau de bord
-        tot_paye_d = sum(_val(r.get("Montant payé")) or 0 for r in st.session_state["recap"])
-        tot_ttc_d = sum(_val(v) or 0 for v in df_dashboard["Montant TTC"])
-        d1, d2, d3 = st.columns(3)
-        d1.metric("💰 Déjà payé", str(round(tot_paye_d, 2)))
-        d2.metric("💸 Reste à payer", str(max(round(tot_ttc_d - tot_paye_d, 2), 0.0)))
+
+        def _fm(x):
+            """Montant lisible : 1 234,56 (arrondi a 2 decimales)."""
+            try:
+                return "{:,.2f}".format(round(float(x), 2)).replace(",", " ").replace(".", ",")
+            except Exception:
+                return "0"
+
+        # Tous ces chiffres sont calcules UNIQUEMENT sur les factures enregistrees
+        tot_ht_d = round(sum(_val(v) or 0 for v in df_dashboard["Montant HT"]), 2)
+        tot_tva_d = round(sum(_val(v) or 0 for v in df_dashboard["Montant TVA"]), 2)
+        tot_ttc_d = round(sum(_val(v) or 0 for v in df_dashboard["Montant TTC"]), 2)
+        tot_paye_d = round(sum(_val(r.get("Montant payé")) or 0
+                               for r in st.session_state["recap"]), 2)
+        reste_affiche = 0.0
+        for r in st.session_state["recap"]:
+            if str(r.get("Payée ?", "")).upper() != "OUI":
+                reste_affiche += (_reste_a_payer(r) or 0)
+        reste_affiche = round(reste_affiche, 2)
+        taux_rec = (100.0 * tot_paye_d / tot_ttc_d) if tot_ttc_d else 0.0
         ajd_d = datetime.date.today()
         retards_d = []
         for r in st.session_state["recap"]:
@@ -1520,12 +1538,30 @@ if page == "🏠 Tableau de bord":
             ech_d = _date_depuis_txt(r.get("Date échéance"))
             if ech_d and ech_d < ajd_d:
                 retards_d.append(r)
-        d3.metric("🚨 En retard", str(len(retards_d)))
-        for r in retards_d:
-            st.error("🚨 **" + str(r.get("Fournisseur", "?")) + "** n° " +
-                     str(r.get("N° facture", "?")) + " — échéance dépassée depuis le " +
-                     str(r.get("Date échéance")) + " · reste " + str(_reste_a_payer(r)))
-        if not retards_d and tot_ttc_d - tot_paye_d > 0.005:
+
+        def _carte(libelle, valeur, classe=""):
+            return ('<div class="carte-kpi ' + classe + '"><div class="kpi-lib">' +
+                    libelle + '</div><div class="kpi-val">' + valeur + "</div></div>")
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.markdown(_carte("Factures enregistrées", str(len(df_dashboard))), unsafe_allow_html=True)
+        k2.markdown(_carte("Total HT", _fm(tot_ht_d)), unsafe_allow_html=True)
+        k3.markdown(_carte("Total TVA", _fm(tot_tva_d), "bleu"), unsafe_allow_html=True)
+        k4.markdown(_carte("Total TTC", _fm(tot_ttc_d)), unsafe_allow_html=True)
+        k5, k6, k7, k8 = st.columns(4)
+        k5.markdown(_carte("💰 Déjà payé", _fm(tot_paye_d), "vert"), unsafe_allow_html=True)
+        k6.markdown(_carte("💸 Reste à encaisser", _fm(reste_affiche), "orange"), unsafe_allow_html=True)
+        k7.markdown(_carte("📊 Recouvrement", str(round(taux_rec, 1)).replace(".", ",") + " %"), unsafe_allow_html=True)
+        k8.markdown(_carte("🚨 En retard", str(len(retards_d)), "rouge" if retards_d else ""), unsafe_allow_html=True)
+
+        if retards_d:
+            with st.expander("🚨 Factures en retard (" + str(len(retards_d)) + ")",
+                             expanded=True):
+                for r in retards_d:
+                    st.error("🚨 **" + str(r.get("Fournisseur", "?")) + "** n° " +
+                             str(r.get("N° facture", "?")) + " — échéance dépassée depuis le " +
+                             str(r.get("Date échéance")) + " · reste " + str(_reste_a_payer(r)))
+        elif reste_affiche > 0.005:
             st.success("✅ Aucune facture en retard de paiement.")
         st.dataframe(df_dashboard, use_container_width=True, hide_index=True)
         st.caption("Les factures enregistrées survivent à la fermeture de l'application "
@@ -2130,8 +2166,12 @@ if page == "📋 Récapitulatif":
         with c3:
             with st.expander("🗑️ Supprimer / vider"):
                 num_suppr = st.text_input("Numéro de facture à supprimer", key="num_suppr")
+                conf_suppr = st.checkbox("Je confirme vouloir supprimer CETTE facture",
+                                         key="conf_suppr")
                 if st.button("Supprimer cette facture", key="btn_suppr"):
-                    if num_suppr.strip():
+                    if not conf_suppr:
+                        st.warning("Coche d'abord la case de confirmation.")
+                    elif num_suppr.strip():
                         cible = [r for r in st.session_state["recap"]
                                  if str(r.get("N° facture", "")).upper() == num_suppr.strip().upper()]
                         if cible:
@@ -2143,9 +2183,17 @@ if page == "📋 Récapitulatif":
                             st.warning("Aucune facture avec ce numéro.")
                     else:
                         st.warning("Écris d'abord le numéro de facture.")
+                st.divider()
+                conf_vider = st.checkbox("⚠️ Je comprends que TOUTES les factures et paiements "
+                                         "seront effacés (local + en ligne)",
+                                         key="conf_vider")
                 if st.button("Tout vider", key="btn_vider"):
-                    db_vider()
-                    st.session_state["recap"] = []
-                    st.rerun()
+                    if conf_vider:
+                        db_vider()
+                        st.session_state["recap"] = []
+                        st.rerun()
+                    else:
+                        st.warning("Coche d'abord la case de confirmation. Action annulée, "
+                                   "aucune donnée n'a été touchée.")
 
 st.caption("Factures IA — version 20 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
