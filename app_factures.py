@@ -1074,7 +1074,7 @@ with st.sidebar:
     else:
         st.caption("💾 Sauvegarde locale (SQLite)")
     if st.session_state.get("erreur_cloud"):
-        st.error("⚠️ Problème de connexion à la sauvegarde en ligne : les données ont été "
+    
                  "gardées en local. Détail : " + str(st.session_state["erreur_cloud"]))
         if st.button("🔄 Réessayer maintenant", key="btn_reessayer_cloud"):
             st.session_state.pop("erreur_cloud", None)
