@@ -30,14 +30,15 @@ except Exception:
 
 @st.cache_data(show_spinner=False)
 def lire_texte_pdf(fichier):
+    """Retourne (texte, methode) : 'texte du PDF' ou 'OCR (scan)'."""
     doc = None
     try:
         doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
         texte = "\n".join(page.get_text() for page in doc).strip()
         if len(texte) >= 40:
-            return texte
+            return texte, "texte du PDF"
         if not HAS_OCR:
-            return texte
+            return texte, "texte du PDF"
         pages_ocr = []
         for page in doc:
             pix = page.get_pixmap(dpi=200)
@@ -47,9 +48,9 @@ def lire_texte_pdf(fichier):
             except Exception:
                 texte_page = pytesseract.image_to_string(image)
             pages_ocr.append(texte_page)
-        return "\n".join(pages_ocr).strip()
+        return "\n".join(pages_ocr).strip(), "OCR (scan)"
     except Exception:
-        return None
+        return None, ""
     finally:
         if doc is not None:
             doc.close()
@@ -218,10 +219,17 @@ def extraire_numero(t):
         r"\bn\s*[.o]?\s*(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
         r"\bfacture\s*:\s*([a-z0-9][a-z0-9./_-]*)",
         r"\binvoice\s*(?:(?:no|number|#)\s*)?[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        # Formats reels frequents : "Facture 2026-123", "Factures FA123", "F/2026/001"
+        r"\bfactures?\s+(\d[\w./-]{2,})",
+        r"\bf\s*/\s*n\s*[:.\-]?\s*([a-z0-9][a-z0-9./_-]+)",
+        # "N° : FA-123" seul sur une ligne (sans siret/siren/client autour)
+        r"\bn[.o]?\s*[:]\s*([a-z0-9][a-z0-9./_-]{2,})",
     ]
     for ligne in t.splitlines():
         ln = norme(ligne)
         if "date" in ln:
+            continue
+        if re.search(r"siret|siren|s\.s|client|adherent|adhesion|tel|tva|interlocuteur", ln):
             continue
         for motif in motifs:
             m = re.search(motif, ln, flags=re.IGNORECASE)
@@ -485,7 +493,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 11 · 100 % local · sauvegarde automatique")
+    st.caption("Version 12 · 100 % local · sauvegarde automatique")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -567,8 +575,7 @@ def _val(x):
 
 def traiter_facture(f):
     """Lit un PDF et retourne un dictionnaire avec tout ce qui a ete extrait + le statut."""
-    texte = lire_texte_pdf(f)
-    methode = "texte du PDF"
+    texte, methode = lire_texte_pdf(f)
     if not texte or len(texte) < 40:
         return None  # illisible
 
@@ -602,7 +609,7 @@ def traiter_facture(f):
     manquants = [c for c in CHAMPS if donnees.get(c) in (None, "")]
     alertes = verifier_coherence(ht, montant_tva, ttc, taux)
     return {"donnees": donnees, "manquants": manquants, "alertes": alertes,
-            "liste_taux": liste_taux, "methode": methode}
+            "liste_taux": liste_taux, "methode": methode, "texte": texte_extraction}
 
 
 # ---------- PAGE : TABLEAU DE BORD ----------
@@ -734,6 +741,18 @@ if page == "📄 Factures PDF" and fichiers:
             else:
                 for a in alertes:
                     st.error("❌ " + a)
+                # Aide au diagnostic : TVA attendue calculee a partir du TTC et du HT
+                _ht = _val(df_corrige.iloc[0]["Montant HT"])
+                _ttc = _val(df_corrige.iloc[0]["Montant TTC"])
+                if _ht is not None and _ttc is not None and _ttc > _ht:
+                    st.info("💡 TVA attendue (TTC − HT) = **" + str(round(_ttc - _ht, 2)) +
+                            "** — vérifie sur la facture, et corrige le champ « Montant TVA » si besoin.")
+
+            # Diagnostic : texte lu par l'application (pour m'aider a corriger les regles)
+            with st.expander("🔍 Diagnostic — texte lu par l'application"):
+                st.caption("Copie-colle ce texte (surtout les lignes « Total », « TVA », « N° ») "
+                           "dans notre conversation si un champ est faux : je corrige la règle de lecture.")
+                st.code(r.get("texte", "")[:4000], language="text")
 
             ligne_candidate = {c: df_corrige.iloc[0][c] for c in CHAMPS}
             doublon, existante = est_doublon(ligne_candidate, st.session_state["recap"])
@@ -895,4 +914,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 11 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 12 · " + datetime.date.today().strftime("%d/%m/%Y"))
