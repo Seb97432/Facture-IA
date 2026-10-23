@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v16 - IA D'OR : moteur de trios HT/TVA/TTC, OCR FUSION
-(multi-essais : on garde les 3 meilleures lectures differentes et on les
-donne TOUTES a l'IA), reconstitution des virgules perdues par l'OCR
-(2724 lu au lieu de 27,24), N° facture elargi, dates securisees."""
+"""FACTURES IA v17 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures,
+SUIVI DES PAIEMENTS (partiel, historique, confirmation humaine, retards,
+echeances a venir) et PACK COMPTABLE (selection, CSV parametrable, ZIP avec
+PDF originaux). Regle d'or : jamais inventer, jamais 'payee' sans toi."""
 
 import re
 import io
 import os
 import json
+import zipfile
 import unicodedata
 import datetime
 import sqlite3
@@ -832,13 +833,14 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 16 · IA d'OR 🏆 · 100 % local")
+    st.caption("Version 17 · IA d'OR 🏆 · 100 % local")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
     page = st.radio(
         "Choisir une page",
-        ["🏠 Tableau de bord", "📄 Factures PDF", "📋 Récapitulatif"],
+        ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
+         "📤 Pour le comptable", "📋 Récapitulatif"],
         key="navigation_page",
         label_visibility="collapsed",
     )
@@ -921,6 +923,65 @@ EXPLIQUES = {
 def _val(x):
     try:
         return float(str(x).replace(",", ".")) if str(x).strip() else None
+    except ValueError:
+        return None
+
+
+# ---------- SUIVI DES PAIEMENTS (v17) ----------
+
+DOCS = os.path.join(DOSSIER, "documents_factures")
+
+
+def _nom_pdf(ligne):
+    """Nom de fichier sûr pour la copie du PDF (fournisseur + n° facture)."""
+    base = (str(ligne.get("Fournisseur", "facture")) + "_" +
+            str(ligne.get("N° facture", ""))).strip().replace(" ", "_")
+    base = re.sub(r"[^\w.\-]", "_", base) or "facture"
+    return base + ".pdf", os.path.join(DOCS, base + ".pdf")
+
+
+def sauver_pdf(ligne, f):
+    """Copie le PDF original dans le dossier 'documents_factures' pour
+    pouvoir l'envoyer au comptable plus tard. Échoue silencieusement."""
+    try:
+        os.makedirs(DOCS, exist_ok=True)
+        _, chemin = _nom_pdf(ligne)
+        with open(chemin, "wb") as sortie:
+            sortie.write(f.getvalue())
+    except Exception:
+        pass
+
+
+def _montant_paye(ligne):
+    v = _val(ligne.get("Montant payé"))
+    return v or 0.0
+
+
+def _reste_a_payer(ligne):
+    ttc = _val(ligne.get("Montant TTC"))
+    if ttc is None:
+        return None
+    if str(ligne.get("Payée ?", "")).upper() == "OUI":
+        return 0.0
+    return round(max(ttc - _montant_paye(ligne), 0.0), 2)
+
+
+def _statut_paiement(ligne):
+    """JAMAIS 'Payée' sans confirmation humaine : le statut vient du champ
+    'Payée ?' que seul l'utilisateur peut mettre à OUI."""
+    if str(ligne.get("Payée ?", "")).upper() == "OUI":
+        return "Payée"
+    if _montant_paye(ligne) > 0:
+        return "Partiellement payée"
+    return "Non payée"
+
+
+def _date_depuis_txt(d):
+    m = re.match(r"(\d{2})/(\d{2})/(\d{4})", str(d or ""))
+    if not m:
+        return None
+    try:
+        return datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
     except ValueError:
         return None
 
@@ -1035,6 +1096,7 @@ if page == "📄 Factures PDF" and fichiers:
                     passees.append(r["f"].name + " (doublon)")
                     continue
                 db_ajouter(ligne)
+                sauver_pdf(ligne, r["f"])   # v17 : garde le PDF pour le comptable
                 recap_actuel = recap_actuel + [ligne]
                 ajoutees += 1
             st.session_state["recap"] = db_charger()
@@ -1115,6 +1177,7 @@ if page == "📄 Factures PDF" and fichiers:
                          disabled=bool(manquants or alertes)):
                 ligne = {c: df_corrige.iloc[0][c] for c in CHAMPS}
                 db_ajouter(ligne)
+                sauver_pdf(ligne, f)   # v17 : garde le PDF pour le comptable
                 st.session_state["recap"] = db_charger()
                 st.rerun()
 
@@ -1126,6 +1189,256 @@ if page == "📄 Factures PDF" and fichiers:
 
 elif page == "📄 Factures PDF":
     st.info("👆 Dépose une facture PDF — ou ouvre « 🗂️ Factures de test » à gauche pour essayer avec les 3 PDF d'exemple.")
+
+# ---------- PAGE : PAIEMENTS (v17) ----------
+
+if page == "💰 Paiements":
+    if not st.session_state["recap"]:
+        st.info("Aucune facture enregistrée pour l'instant. Ouvre « 📄 Factures PDF » pour commencer.")
+    else:
+        lignes_p = st.session_state["recap"]
+        tot_ttc = sum(_val(l.get("Montant TTC")) or 0 for l in lignes_p)
+        tot_paye = sum(_val(l.get("Montant payé")) or 0 for l in lignes_p)
+        aujourdhui_p = datetime.date.today()
+        dans_30j = aujourdhui_p + datetime.timedelta(days=30)
+
+        en_retard, bientot = [], []
+        for l in lignes_p:
+            if str(l.get("Payée ?", "")).upper() == "OUI":
+                continue
+            d = _date_depuis_txt(l.get("Date échéance"))
+            if d and d < aujourdhui_p:
+                en_retard.append(l)
+            elif d and d <= dans_30j:
+                bientot.append(l)
+
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Total facturé (TTC)", str(round(tot_ttc, 2)))
+        m2.metric("Total déjà payé", str(round(tot_paye, 2)))
+        m3.metric("Reste à payer", str(round(tot_ttc - tot_paye, 2)))
+        m4.metric("🚨 En retard", str(len(en_retard)))
+        m5.metric("⏳ À venir (< 30 j)", str(len(bientot)))
+
+        for l in en_retard[:10]:
+            st.error("🚨 **" + str(l.get("Fournisseur", "?")) + "** n° " + str(l.get("N° facture", "?")) +
+                     " — échéance dépassée depuis le " + str(l.get("Date échéance")) +
+                     " · reste " + str(_reste_a_payer(l)) + " " + str(l.get("Devise", "")))
+        for l in bientot[:10]:
+            st.warning("⏳ **" + str(l.get("Fournisseur", "?")) + "** n° " + str(l.get("N° facture", "?")) +
+                       " — à payer avant le " + str(l.get("Date échéance")) +
+                       " · reste " + str(_reste_a_payer(l)) + " " + str(l.get("Devise", "")))
+
+        # --- Enregistrer un paiement (jamais 'payée' sans confirmation) ---
+        st.markdown("### 💵 Enregistrer un paiement")
+        impayees = [l for l in lignes_p if str(l.get("Payée ?", "")).upper() != "OUI"]
+        if not impayees:
+            st.success("🎉 Toutes les factures enregistrées sont marquées payées.")
+        else:
+            libelles = [str(l.get("Fournisseur", "?")) + " · n° " + str(l.get("N° facture", "?")) +
+                        " · reste " + str(_reste_a_payer(l)) for l in impayees]
+            choix_p = st.selectbox("Facture concernée", libelles, key="sel_paiement")
+            cible = impayees[libelles.index(choix_p)]
+            reste_p = _reste_a_payer(cible)
+            if reste_p is None:
+                st.warning("Le montant TTC de cette facture est inconnu : complète-le dans "
+                           "« 📋 Récapitulatif » avant d'enregistrer un paiement.")
+            else:
+                cp1, cp2, cp3, cp4 = st.columns(4)
+                montant_p = cp1.number_input("Montant du paiement", min_value=0.0,
+                                             max_value=float(reste_p), value=0.0, step=1.0)
+                date_p = cp2.date_input("Date du paiement", aujourdhui_p)
+                mode_p = cp3.selectbox("Moyen de paiement",
+                                       ["Virement", "Carte bancaire", "Chèque",
+                                        "Espèces", "Prélèvement", "Autre"])
+                note_p = cp4.text_input("Note (facultatif)", "")
+                if st.button("✅ Enregistrer ce paiement", type="primary",
+                             use_container_width=True, key="btn_paiement"):
+                    if montant_p <= 0:
+                        st.error("Le montant doit être supérieur à 0.")
+                    else:
+                        maj = dict(cible)
+                        payes = list(maj.get("Historique paiements") or [])
+                        payes.append({"date": date_p.strftime("%d/%m/%Y"),
+                                      "montant": round(montant_p, 2),
+                                      "mode": mode_p, "note": note_p})
+                        maj["Historique paiements"] = payes
+                        maj["Montant payé"] = round(_montant_paye(cible) + montant_p, 2)
+                        db_remplacer_numero(cible, maj)
+                        st.session_state["recap"] = db_charger()
+                        reste_apres = round(reste_p - montant_p, 2)
+                        if reste_apres <= 0.005:
+                            st.success("Paiement enregistré : la facture est soldée 💰")
+                            st.warning("⚠️ Elle n'est **pas encore** marquée « Payée » : "
+                                       "c'est TOI qui confirmes ci-dessous.")
+                            if st.button("✔️ CONFIRMER : cette facture est entièrement payée",
+                                         key="btn_confirm_payee", type="primary"):
+                                maj2 = dict(maj)
+                                maj2["Payée ?"] = "OUI"
+                                db_remplacer_numero(cible, maj2)
+                                st.session_state["recap"] = db_charger()
+                                st.success("Facture confirmée payée ✔")
+                                st.rerun()
+                        else:
+                            st.success("Paiement enregistré ✔ — reste à payer : " +
+                                       str(reste_apres) + " (statut : Partiellement payée)")
+
+        # --- Historique des paiements ---
+        st.markdown("### 📜 Historique des paiements")
+        avec_hist = [l for l in lignes_p if l.get("Historique paiements")]
+        if not avec_hist:
+            st.caption("Aucun paiement enregistré pour l'instant.")
+        for l in avec_hist:
+            intitule = str(l.get("Fournisseur", "?")) + " · n° " + \
+                       str(l.get("N° facture", "?")) + " · " + _statut_paiement(l)
+            with st.expander("📖 " + intitule):
+                st.dataframe(pd.DataFrame(l["Historique paiements"]),
+                             use_container_width=True, hide_index=True)
+                soldée = (_reste_a_payer(l) == 0 and (_val(l.get("Montant TTC")) or 0) > 0
+                          and str(l.get("Payée ?", "")).upper() != "OUI")
+                if soldée:
+                    st.info("Cette facture est soldée mais pas encore confirmée payée.")
+                    if st.button("✔️ CONFIRMER : entièrement payée",
+                                 key="confirm_" + str(l.get("N° facture")) + "_" +
+                                 str(l.get("Fournisseur"))):
+                        maj = dict(l)
+                        maj["Payée ?"] = "OUI"
+                        db_remplacer_numero(l, maj)
+                        st.session_state["recap"] = db_charger()
+                        st.rerun()
+
+        # --- Tableau de suivi global ---
+        st.markdown("### 📊 Suivi global des paiements")
+        suivi = [{"Fournisseur": l.get("Fournisseur", ""),
+                  "N° facture": l.get("N° facture", ""),
+                  "Date échéance": l.get("Date échéance", ""),
+                  "Montant TTC": l.get("Montant TTC", ""),
+                  "Statut": _statut_paiement(l),
+                  "Payé": round(_montant_paye(l), 2),
+                  "Reste à payer": _reste_a_payer(l)} for l in lignes_p]
+        st.dataframe(pd.DataFrame(suivi), use_container_width=True, hide_index=True)
+        st.caption("🔒 Règle d'or : une facture n'est JAMAIS marquée « Payée » "
+                   "automatiquement — c'est toujours ta confirmation.")
+
+# ---------- PAGE : POUR LE COMPTABLE (v17) ----------
+
+if page == "📤 Pour le comptable":
+    if not st.session_state["recap"]:
+        st.info("Aucune facture enregistrée pour l'instant. Ouvre « 📄 Factures PDF » pour commencer.")
+    else:
+        st.markdown("### 📤 Préparer l'envoi au comptable")
+        st.caption("Sélectionne les factures, choisis le format adapté à son logiciel, "
+                   "et télécharge un pack propre et complet.")
+
+        lignes_c = st.session_state["recap"]
+        fournisseurs_c = sorted({str(l.get("Fournisseur", "")) for l in lignes_c if l.get("Fournisseur")})
+        aujourdhui_c = datetime.date.today()
+
+        fc1, fc2, fc3 = st.columns(3)
+        statuts_c = fc1.multiselect("Statuts à inclure",
+                                   ["Payée", "Partiellement payée", "Non payée"],
+                                   default=["Payée", "Partiellement payée", "Non payée"])
+        fournis_c = fc2.multiselect("Fournisseurs", fournisseurs_c, default=fournisseurs_c)
+        periode_c = fc3.selectbox("Période",
+                                  ["Tout", "Cette année", "3 derniers mois", "Ce mois-ci"])
+
+        retenues_c = []
+        for l in lignes_c:
+            if _statut_paiement(l) not in statuts_c:
+                continue
+            if fournis_c and str(l.get("Fournisseur", "")) not in fournis_c:
+                continue
+            if periode_c != "Tout":
+                d = _date_depuis_txt(l.get("Date facture"))
+                if d is None:
+                    continue
+                if periode_c == "Cette année" and d.year != aujourdhui_c.year:
+                    continue
+                if periode_c == "3 derniers mois" and d < aujourdhui_c - datetime.timedelta(days=92):
+                    continue
+                if periode_c == "Ce mois-ci" and (d.year, d.month) != (aujourdhui_c.year, aujourdhui_c.month):
+                    continue
+            retenues_c.append(l)
+
+        def _df_comptable(lignes_sel):
+            return pd.DataFrame([{
+                "TIERS": l.get("Fournisseur", ""), "PIECE": l.get("N° facture", ""),
+                "DATE_PIECE": l.get("Date facture", ""),
+                "DATE_ECHEANCE": l.get("Date échéance", ""),
+                "MONTANT_HT": l.get("Montant HT", ""), "TAUX_TVA": l.get("Taux TVA (%)", ""),
+                "MONTANT_TVA": l.get("Montant TVA", ""), "MONTANT_TTC": l.get("Montant TTC", ""),
+                "DEVISE": l.get("Devise", ""),
+                "STATUT_PAIEMENT": _statut_paiement(l),
+                "MONTANT_PAYE": round(_montant_paye(l), 2),
+                "RESTE_A_PAYER": _reste_a_payer(l)} for l in lignes_sel])
+
+        st.markdown("**" + str(len(retenues_c)) + " facture(s) sélectionnée(s)** pour l'envoi.")
+        if retenues_c:
+            st.dataframe(_df_comptable(retenues_c), use_container_width=True, hide_index=True)
+        else:
+            st.warning("Aucune facture ne correspond à ces filtres — change la sélection ci-dessus.")
+
+        # --- Export CSV paramétrable ---
+        st.markdown("#### 📄 Export CSV adapté au logiciel comptable")
+        ec1, ec2 = st.columns(2)
+        separateur_c = ec1.radio("Séparateur", [";", ","], horizontal=True)
+        encodage_c = ec2.radio("Encodage", ["UTF-8 avec BOM (recommandé Excel)",
+                                            "UTF-8 simple"], horizontal=True)
+        csv_c = _df_comptable(retenues_c).to_csv(index=False, sep=separateur_c)
+        csv_c_bytes = csv_c.encode("utf-8-sig" if "BOM" in encodage_c else "utf-8")
+        st.download_button("⬇️ Export CSV comptable (" + str(len(retenues_c)) + " factures)",
+                           csv_c_bytes, file_name="export_comptable.csv", mime="text/csv",
+                           use_container_width=True, key="dl_cpt_csv")
+        st.caption("💡 Astuce : demande à ton comptable quel séparateur et encodage "
+                   "SON logiciel préfère. Les colonnes (TIERS, PIECE, MONTANT_TTC...) "
+                   "sont les plus répandues ; on ne promet la compatibilité avec aucun "
+                   "logiciel en particulier.")
+
+        # --- Pack ZIP : CSV + PDF originaux + récapitulatif ---
+        st.markdown("#### 📦 Pack complet (PDF + CSV + récapitulatif)")
+        st.caption("Le pack regroupe les PDF originaux des factures sélectionnées, "
+                   "le CSV comptable et un fichier LISEZ-MOI qui résume tout. "
+                   "Ton comptable reçoit un dossier classé, prêt à saisir.")
+        if st.button("🧮 Préparer le pack ZIP", key="btn_zip"):
+            buf_zip = io.BytesIO()
+            pdfs_inclus, manquants = 0, []
+            with zipfile.ZipFile(buf_zip, "w", zipfile.ZIP_DEFLATED) as z:
+                z.writestr("factures_export_comptable.csv", csv_c_bytes)
+                resume = "FACTURE IA — Pack pour le comptable\n"
+                resume += "Préparé le " + aujourdhui_c.strftime("%d/%m/%Y") + "\n"
+                resume += str(len(retenues_c)) + " facture(s)\n"
+                resume += "Séparateur CSV : " + separateur_c + "\n\nLISTE DES FACTURES :\n"
+                for l in retenues_c:
+                    nom_f, chemin_f = _nom_pdf(l)
+                    if os.path.exists(chemin_f):
+                        with open(chemin_f, "rb") as pf:
+                            z.writestr("PDF/" + nom_f, pf.read())
+                        pdfs_inclus += 1
+                    else:
+                        manquants.append(str(l.get("Fournisseur", "?")) + " n° " +
+                                         str(l.get("N° facture", "?")))
+                    resume += ("- " + str(l.get("Fournisseur", "?")) + " | n° " +
+                                str(l.get("N° facture", "?")) + " | TTC " +
+                                str(l.get("Montant TTC", "?")) + " " +
+                                str(l.get("Devise", "")) + " | " + _statut_paiement(l) + "\n")
+                if manquants:
+                    resume += ("\nPDF manquants (factures ajoutées avant la sauvegarde "
+                               "automatique des PDF) :\n")
+                    for m_ in manquants:
+                        resume += "- " + m_ + "\n"
+                z.writestr("0_LISEZ_MOI.txt", resume.encode("utf-8"))
+            st.session_state["pack_zip"] = buf_zip.getvalue()
+            st.session_state["pack_info"] = {"pdfs": pdfs_inclus, "total": len(retenues_c)}
+        if st.session_state.get("pack_zip"):
+            info_c = st.session_state["pack_info"]
+            st.success("✅ Pack prêt : " + str(info_c["pdfs"]) + " PDF inclus sur " +
+                       str(info_c["total"]) + " facture(s).")
+            st.download_button("⬇️ Télécharger le pack ZIP",
+                               st.session_state["pack_zip"],
+                               file_name="pack_comptable_" + aujourdhui_c.strftime("%Y%m%d") + ".zip",
+                               mime="application/zip", use_container_width=True, key="dl_zip")
+        st.caption("🔒 Tout reste sur ton ordinateur : le pack est fabriqué chez toi, "
+                   "rien n'est envoyé sur Internet. C'est toi qui transmets le fichier "
+                   "à ton comptable, par le canal que tu choisis.")
 
 # ---------- PAGE : RECAPITULATIF ----------
 
@@ -1170,6 +1483,11 @@ if page == "📋 Récapitulatif":
         # Barre de recherche
         recherche = st.text_input("🔍 Rechercher (fournisseur, n° de facture, montant...)", key="recherche_recap")
         df_affiche = df_recap.copy()
+        # v17 : colonnes de suivi des paiements
+        liste_recap = st.session_state["recap"]
+        df_affiche["Statut paiement"] = [_statut_paiement(l) for l in liste_recap]
+        df_affiche["Montant payé"] = [round(_montant_paye(l), 2) for l in liste_recap]
+        df_affiche["Reste à payer"] = [_reste_a_payer(l) for l in liste_recap]
         if recherche.strip():
             masque = df_affiche.astype(str).apply(
                 lambda col: col.str.contains(recherche.strip(), case=False, regex=False, na=False)
@@ -1177,8 +1495,10 @@ if page == "📋 Récapitulatif":
             df_affiche = df_affiche[masque]
             st.caption(str(len(df_affiche)) + " facture(s) trouvée(s) sur " + str(len(df_recap)) + ".")
 
-        # Marquer payee / non payee
+        # Marquer payee / non payee (confirmation humaine, historique preserve)
         with st.expander("✅ Marquer une facture comme payée / non payée"):
+            st.caption("Pour un paiement PARTIEL ou un historique détaillé, utilise la page "
+                       "« 💰 Paiements ». Ici, « OUI » = confirmation que TOUT est payé.")
             c_num, c_etat, c_ok = st.columns([2, 1, 1])
             num_paye = c_num.text_input("N° de facture", key="num_paye")
             nouvel_etat = c_etat.selectbox("Nouvel état", ["OUI", "NON"], key="etat_paye")
@@ -1188,6 +1508,11 @@ if page == "📋 Récapitulatif":
                 if cible:
                     maj = dict(cible[0])
                     maj["Payée ?"] = nouvel_etat
+                    if nouvel_etat == "OUI":
+                        # confirmation humaine : paiement complet enregistre
+                        ttc_paye = _val(maj.get("Montant TTC"))
+                        maj["Montant payé"] = (round(ttc_paye, 2) if ttc_paye is not None
+                                               else round(_montant_paye(maj), 2))
                     db_remplacer_numero(cible[0], maj)
                     st.session_state["recap"] = db_charger()
                     st.success("Facture " + num_paye + " → " + nouvel_etat)
@@ -1264,4 +1589,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 16 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 17 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
