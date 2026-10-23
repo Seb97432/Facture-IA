@@ -847,9 +847,15 @@ def cloud_charger():
 
 def cloud_ajouter(ligne):
     _, _, utilisateur = _cloud_config()
-    _sb_requete("POST", "/rest/v1/factures",
-                donnees={"utilisateur": utilisateur, "donnees": ligne,
-                         "date_ajout": datetime.date.today().isoformat()})
+    _sb_requete(
+        "POST",
+        "/facture",
+        donnees={
+            "utilisateur": utilisateur,
+            "donnees": ligne,
+            "date_ajout": datetime.date.today().isoformat()
+        }
+    )
 
 
 def cloud_tout_pour_utilisateur():
