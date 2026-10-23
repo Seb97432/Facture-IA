@@ -738,20 +738,19 @@ BDD = os.path.join(DOSSIER, "factures.db")
 
 
 def _cloud_config():
-    """Lit la configuration Supabase dans les Secrets Streamlit.
-    Retourne (url, key, utilisateur) ou None si rien n'est configure.
-    Les secrets ne sont JAMAIS affiches ni ecrits dans le code."""
+    """Lit la configuration Supabase depuis les Secrets Streamlit."""
     try:
         conf = st.secrets["factures_ia"]
-        supabase_url = "https://rqwqnziymxlgvgiahwaf.supabase.co/rest/v1/"
-        supabase_key = "sb_publishable_N5xi1f_B3sTDSRKFQDof0Q_fW6gs3E4"
-        utilisateur = "proprietaire"
+        url = str(conf["supabase_url"]).strip().rstrip("/")
+        key = str(conf["supabase_key"]).strip()
+        utilisateur = str(conf.get("utilisateur", "proprietaire")).strip()
+
         if url and key:
             return url, key, utilisateur
-    except Exception:
-        pass
-    return None
+    except Exception as e:
+        st.warning(f"Configuration Supabase indisponible : {e}")
 
+    return None
 
 def _cloud_actif():
     """True si Supabase est configure ET que 'requests' est disponible."""
