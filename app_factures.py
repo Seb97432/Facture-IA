@@ -743,9 +743,9 @@ def _cloud_config():
     Les secrets ne sont JAMAIS affiches ni ecrits dans le code."""
     try:
         conf = st.secrets["factures_ia"]
-        url = str(conf.get("supabase_url", "")).strip().rstrip("/")
-        key = str(conf.get("supabase_key", "")).strip()
-        utilisateur = str(conf.get("utilisateur", "proprietaire")).strip() or "proprietaire"
+        supabase_url = "https://rqwqnziymxlgvgiahwaf.supabase.co/rest/v1/"
+        supabase_key = "sb_publishable_N5xi1f_B3sTDSRKFQDof0Q_fW6gs3E4"
+        utilisateur = "proprietaire"
         if url and key:
             return url, key, utilisateur
     except Exception:
