@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v23 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v24 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
@@ -1234,7 +1234,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 23 · IA d'OR 🏆")
+    st.caption("Version 24 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1438,6 +1438,57 @@ with st.sidebar:
 
         🧮 **Règle d'or : HT + TVA = TTC.**
         """)
+    with st.expander("⚖️ Mentions légales, confidentialité & pilote"):
+        st.markdown("""**⚠️ Ce qu'est Facture IA (et ce qu'elle n'est PAS)**
+
+        Facture IA est un **outil d'aide à la saisie et au suivi des factures
+        reçues** (fournisseurs, paiements, exports). Ce n'est **ni un logiciel
+        comptable certifié, ni une plateforme agréée** de facturation
+        électronique au sens de l'article 289 bis du code général des
+        impôts. Les informations affichées ne remplacent pas les conseils
+        d'un expert-comptable.
+
+        ---
+
+        **📄 Mentions légales**
+
+        - **Éditeur** : Sébastien LESQUELIN — [À COMPLÉTER : adresse, SIREN
+          ou numéro de micro-entreprise le cas échéant]
+        - **Contact** : [À COMPLÉTER : ton email de contact]
+        - **Hébergement de l'application** : Streamlit Cloud (Snowflake Inc.)
+        - **Hébergement des données** : Supabase (région Europe)
+
+        ---
+
+        **🔒 Politique de confidentialité (RGPD)**
+
+        - **Données traitées** : ton adresse email, un mot de passe (jamais
+        stocké en clair : il est chiffré par Supabase Auth), et le **résumé
+        de tes factures** (fournisseur, n° de facture, dates, montants,
+        paiements). **Les PDF originaux ne sont jamais envoyés en ligne** :
+        ils restent uniquement sur ta propre machine.
+        - **Finalité** : te permettre de gérer tes factures. Aucune donnée
+        n'est vendue, louée ou partagée avec des tiers.
+        - **Durée de conservation** : jusqu'à ta suppression des données
+        (bouton « Tout vider » dans le Récapitulatif) ou ta demande.
+        - **Sous-traitants techniques** : Supabase (base de données et
+        comptes, région Europe) et Streamlit Cloud (hébergement du site).
+        - **Sécurité** : chaque compte n'accède qu'à ses propres données,
+        vérifié côté serveur (Supabase Auth + règles RLS).
+        - **Tes droits** (accès, rectification, export, suppression) :
+        exporte tes factures (CSV / Excel dans le Récapitulatif), supprime-les
+        (« Tout vider »), ou écris à [À COMPLÉTER : ton email de contact].
+
+        ---
+
+        **🧪 Cadre du test pilote**
+
+        Accès sur invitation, nombre d'utilisateurs limité. En cas de
+        problème : [À COMPLÉTER : ton email]. Note bien : les données
+        saisies pendant le pilote sont **tes données** — fais des essais
+        avec de vraies copies mais garde tes factures importantes
+        sauvegardées ailleurs (export CSV).""")
+
     with st.expander("🛡️ Où vont mes données ?"):
         if _cloud_actif():
             st.markdown("""**Mode sauvegarde permanente (activé)** :
@@ -2541,4 +2592,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 23 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 24 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
