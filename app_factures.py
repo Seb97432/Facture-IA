@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v18 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures,
-suivi des paiements PRO (modes avec icones, annulation, historique), pack
-comptable organise PAR MOIS, export parametrable (separateur, encodage,
-dates, decimales) et ASSISTANT IA local qui repond aux questions sur tes
-factures. Regle d'or : jamais inventer, jamais 'payee' sans confirmation."""
+"""FACTURES IA v19 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
+PRO, pack comptable par mois, export parametrable, ASSISTANT IA local.
+Regle d'or : jamais inventer, jamais 'payee' sans confirmation humaine."""
 
 import re
 import io
@@ -50,11 +49,26 @@ def _score_ocr(txt):
     return s
 
 
+def _redresser_image(image):
+    """Détecte l'inclinaison/rotation d'un scan penché et le remet droit.
+    (Tesseract OSD : 'Rotate: 90/180/270'). Silencieux si détection impossible."""
+    try:
+        osd = pytesseract.image_to_osd(image)
+        m = re.search(r"Rotate:\s*(\d+)", osd)
+        if m and m.group(1) in ("90", "180", "270"):
+            image = image.rotate(-int(m.group(1)), expand=True)
+    except Exception:
+        pass
+    return image
+
+
 def _preparer_image(png_bytes, binariser):
-    """Nettoie l'image avant l'OCR : niveaux de gris + contraste automatique,
-    et si demandé binarisation noir/blanc (efficace sur les scans ternes)."""
+    """Nettoie l'image avant l'OCR : redressement si le scan est penché,
+    niveaux de gris + contraste automatique, et si demandé binarisation
+    noir/blanc (efficace sur les scans ternes)."""
     image = Image.open(io.BytesIO(png_bytes))
     try:
+        image = _redresser_image(image)
         image = image.convert("L")
         image = ImageOps.autocontrast(image)
         if binariser:
@@ -85,7 +99,7 @@ def _lire_page_ocr(page):
     dans une lecture et le TTC dans une autre)."""
     essais = []
     for dpi, binariser, psm in ((300, False, None), (300, True, 6),
-                                (400, True, None), (500, True, 6)):
+                                (400, True, 4), (500, True, 6)):
         pix = page.get_pixmap(dpi=dpi)
         image = _preparer_image(pix.tobytes("png"), binariser)
         txt = _ocr_image(image, psm)
@@ -142,12 +156,12 @@ def nettoyer_ocr(texte):
     """Corrige les erreurs classiques de l'OCR dans les chiffres :
     O lu a la place de 0, I/l lus a la place de 1 (uniquement autour de chiffres,
     pour ne jamais toucher les mots)."""
-    texte = re.sub(r"(?<=\d)[Oo](?=\d)", "0", texte)
-    texte = re.sub(r"(?<=\d)[Oo](?=[ \u00a0\u202f]*[.,]\d)", "0", texte)
-    texte = re.sub(r"(?<=\d)[Il](?=\d)", "1", texte)
-    texte = re.sub(r"(?<=\d)[Il](?=[ \u00a0\u202f]*[.,]\d)", "1", texte)
+    texte = re.sub(r"(?<=\d)Oo", "0", texte)
+    texte = re.sub(r"(?<=\d)Oo", "0", texte)
+    texte = re.sub(r"(?<=\d)Il", "1", texte)
+    texte = re.sub(r"(?<=\d)Il", "1", texte)
     texte = re.sub(r"(?<=\d)[Oo](?=[/\-.]\d)", "0", texte)   # dates : 1O/03/2026
-    texte = re.sub(r"(?<=[/\-.])[Oo](?=\d)", "0", texte)
+    texte = re.sub(r"(?<=[/\-.])Oo", "0", texte)
     return texte
 
 
@@ -259,7 +273,7 @@ def _nombre(s):
 def _date_std(d):
     if not d:
         return None
-    m = re.match(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})", d)
+    m = re.match(r"(\d{1,2})/.-/.-", d)
     if not m:
         return d
     j, mois, a = int(m.group(1)), int(m.group(2)), m.group(3)
@@ -319,6 +333,9 @@ def _numero_valide(c):
         return None
     # un numero de facture n'est pas une date
     if re.fullmatch(r"\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}", c):
+        return None
+    # ni un SIRET (14 chiffres) : erreur de lecture classique
+    if re.fullmatch(r"\d{14}", c):
         return None
     return c
 
@@ -834,7 +851,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 18 · IA d'OR 🏆 · 100 % local")
+    st.caption("Version 19 · IA d'OR 🏆 · 100 % local")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -894,9 +911,16 @@ with st.sidebar:
         🧮 **Règle d'or : HT + TVA = TTC.**
         """)
     with st.expander("🛡️ Où vont mes données ?"):
-        st.markdown("Nulle part. Tout est traité **sur ton ordinateur** : "
-                    "les factures validées sont sauvegardées dans le fichier `factures.db` du dossier de l'application, "
-                    "aucune donnée ne quitte ton PC.")
+        st.markdown("""Tout est traité **sur la machine où l'application tourne** :
+                    les factures validées sont sauvegardées dans le fichier `factures.db`
+                    du dossier de l'application, aucun PDF ni montant n'est envoyé ailleurs.
+
+                    ⚠️ **Important — déploiement sur Streamlit Cloud** : l'espace disque de
+                    Streamlit Cloud est **effacé à chaque redémarrage ou redéploiement**.
+                    Ta base `factures.db` ne survivra donc PAS là-bas. Pour garder tes
+                    données : lance l'application en **local** (ton PC, où tout persiste),
+                    ou **exporte régulièrement** tes factures (CSV / Excel dans le
+                    Récapitulatif), ou branche une base en ligne (Supabase).""")
 
 # ============================================================
 # 8. TRAITEMENT
@@ -1803,4 +1827,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 18 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 19 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
