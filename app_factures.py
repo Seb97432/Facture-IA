@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v14 - IA D'OR : moteur de trios HT/TVA/TTC, OCR renforce (2 passes
-haute qualite + nettoyage OCR), lecture du N° de facture elargie (Ref, Pièce,
-Facture N° ... du 12/10/2026), dates avec filets de securite sur les scans."""
+"""FACTURES IA v15 - IA D'OR : moteur de trios HT/TVA/TTC, OCR DE PRECISION
+(multi-essais : 300/400 dpi, binarisation, on garde la meilleure lecture via
+un score de qualite), N° facture elargi, dates avec filets de securite."""
 
 import re
 import io
@@ -18,7 +18,7 @@ import pandas as pd
 # --- OCR (Tesseract) : facultatif, installe si present ---
 try:
     import pytesseract
-    from PIL import Image
+    from PIL import Image, ImageOps
     CHEMIN_TESSERACT = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     if os.path.exists(CHEMIN_TESSERACT):
         pytesseract.pytesseract.tesseract_cmd = CHEMIN_TESSERACT
@@ -30,28 +30,91 @@ except Exception:
 # 1. OUTILS DE BASE
 # ============================================================
 
-def _ocr_page(page, dpi):
-    """Lance l'OCR d'une page, avec plusieurs langues en secours."""
-    pix = page.get_pixmap(dpi=dpi)
-    image = Image.open(io.BytesIO(pix.tobytes("png")))
-    if dpi >= 300:
-        try:
-            image = image.convert("L")   # niveaux de gris : meilleure lecture
-        except Exception:
-            pass
+def _score_ocr(txt):
+    """Note la qualité d'un texte OCR : on préfère celui qui contient
+    des dates, des montants à décimales et des mots-clés comptables.
+    Comme ça, quand on essaie plusieurs lectures, on garde la MEILLEURE."""
+    if not txt:
+        return -1
+    s = 0
+    s += 3 * len(re.findall(r"\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}", txt))
+    s += 2 * len(re.findall(r"\d+[.,]\d{2}\b", txt))
+    tn = norme(txt)
+    for mot in ("total", "tva", "ht", "ttc", "facture", "invoice",
+                "net a payer", "echeance", "hors taxe"):
+        if mot in tn:
+            s += 2
+    return s
+
+
+def _preparer_image(png_bytes, binariser):
+    """Nettoie l'image avant l'OCR : niveaux de gris + contraste automatique,
+    et si demandé binarisation noir/blanc (efficace sur les scans ternes)."""
+    image = Image.open(io.BytesIO(png_bytes))
+    try:
+        image = image.convert("L")
+        image = ImageOps.autocontrast(image)
+        if binariser:
+            image = image.point(lambda x: 255 if x > 160 else 0)
+    except Exception:
+        pass
+    return image
+
+
+def _ocr_image(image, psm=None):
+    """Lance Tesseract sur une image préparée, français d'abord."""
+    cfg = "--psm " + str(psm) if psm else None
     for lang in ("fra", "fra+eng"):
         try:
-            return pytesseract.image_to_string(image, lang=lang)
+            return pytesseract.image_to_string(image, lang=lang, config=cfg)
         except Exception:
             try:
-                return pytesseract.image_to_string(image)
+                return pytesseract.image_to_string(image, config=cfg)
             except Exception:
-                return ""
+                pass
     return ""
 
 
-def _ocr_lisible(texte_page):
-    return len(texte_page.strip()) >= 40 and re.search(r"\d", texte_page)
+def _lire_page_ocr(page):
+    """Multi-essais sur une page : plusieurs résolutions et filtres,
+    on garde la lecture au meilleur score. Si un essai lit déjà très
+    bien, on s'arrête (plus rapide)."""
+    essais = []
+    for dpi, binariser, psm in ((300, False, None), (300, True, 6),
+                                (400, True, None), (400, False, 6)):
+        pix = page.get_pixmap(dpi=dpi)
+        image = _preparer_image(pix.tobytes("png"), binariser)
+        txt = _ocr_image(image, psm)
+        essais.append(txt)
+        if _score_ocr(txt) >= 14:
+            break   # très bonne lecture, inutile d'insister
+    meilleur, meilleur_score = "", -1
+    for txt in essais:
+        if _score_ocr(txt) > meilleur_score:
+            meilleur, meilleur_score = txt, _score_ocr(txt)
+    return meilleur
+
+
+@st.cache_data(show_spinner=False)
+def lire_texte_pdf(fichier):
+    """Retourne (texte, methode) : 'texte du PDF' ou 'OCR (scan)'.
+    Pour les scans : plusieurs essais (résolution, filtres, modes de
+    lecture) et on garde la MEILLEURE lecture, puis nettoyage OCR."""
+    doc = None
+    try:
+        doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
+        texte = "\n".join(page.get_text() for page in doc).strip()
+        if len(texte) >= 40:
+            return texte, "texte du PDF"
+        if not HAS_OCR:
+            return texte, "texte du PDF"
+        pages_ocr = [_lire_page_ocr(page) for page in doc]
+        return nettoyer_ocr("\n".join(pages_ocr).strip()), "OCR (scan)"
+    except Exception:
+        return None, ""
+    finally:
+        if doc is not None:
+            doc.close()
 
 
 def nettoyer_ocr(texte):
@@ -65,34 +128,6 @@ def nettoyer_ocr(texte):
     texte = re.sub(r"(?<=\d)[Oo](?=[/\-.]\d)", "0", texte)   # dates : 1O/03/2026
     texte = re.sub(r"(?<=[/\-.])[Oo](?=\d)", "0", texte)
     return texte
-
-
-@st.cache_data(show_spinner=False)
-def lire_texte_pdf(fichier):
-    """Retourne (texte, methode) : 'texte du PDF' ou 'OCR (scan)'.
-    Pour les scans : 1re passe a 200 dpi, et si le resultat est pauvre
-    2e passe a 350 dpi en niveaux de gris, puis nettoyage OCR."""
-    doc = None
-    try:
-        doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
-        texte = "\n".join(page.get_text() for page in doc).strip()
-        if len(texte) >= 40:
-            return texte, "texte du PDF"
-        if not HAS_OCR:
-            return texte, "texte du PDF"
-        pages_ocr = []
-        for page in doc:
-            texte_page = _ocr_page(page, 200)
-            if not _ocr_lisible(texte_page):
-                # 2e passe : plus haute resolution + niveaux de gris
-                texte_page = _ocr_page(page, 350)
-            pages_ocr.append(texte_page)
-        return nettoyer_ocr("\n".join(pages_ocr).strip()), "OCR (scan)"
-    except Exception:
-        return None, ""
-    finally:
-        if doc is not None:
-            doc.close()
 
 
 @st.cache_data(show_spinner=False)
@@ -758,7 +793,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 14 · IA d'OR 🏆 · 100 % local")
+    st.caption("Version 15 · IA d'OR 🏆 · 100 % local")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -1190,4 +1225,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 14 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 15 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
