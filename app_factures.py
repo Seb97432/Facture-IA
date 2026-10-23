@@ -254,31 +254,73 @@ def extraire_montant(t, etiquettes):
     return None
 
 
+def _numero_valide(c):
+    """Nettoie et valide un candidat numero de facture."""
+    c = c.strip(" :.-#").upper()
+    if len(c) < 2:
+        return None
+    if c.lower() in ("de", "du", "client", "no", "la", "date", "et", "sur", "le"):
+        return None
+    # un numero de facture n'est pas une date
+    if re.fullmatch(r"\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}", c):
+        return None
+    return c
+
+
 def extraire_numero(t):
-    """Extrait le numero de facture avec plusieurs formats de libelles."""
+    """Extrait le numero de facture, formats francais ET anglais, meme quand
+    la date est sur la MEME ligne (« Facture N° FA-123 du 12/10/2026 »),
+    meme avec les libelles Ref / Piece / Document, et en dernier recours
+    un numero isole (FA-123, 2026-307) sur une ligne qui parle de facture."""
     motifs = [
-        r"\bfacture\s*(?:n\s*[.o]|numero|number|#)\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bfacture\s*(?:n\s*[.o°]|numero|number|#)\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
         r"\bnumero\s+(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\bn\s*[.o]?\s*(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\bfacture\s*:\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\binvoice\s*(?:(?:no|number|#)\s*)?[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
-        # Formats reels frequents : "Facture 2026-123", "F/2026/001", "N° : FA-123"
+        r"\bn\s*[.o°]?\s*(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bfacture\s*[:#]\s*([a-z0-9][a-z0-9./_-]{2,})",
         r"\bfactures?\s+(\d[\w./-]{2,})",
+        r"\binvoice\s*(?:(?:no|number|#)\s*)?[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
         r"\bf\s*/\s*n\s*[:.\-]?\s*([a-z0-9][a-z0-9./_-]+)",
-        r"\bn[.o]?\s*[:]\s*([a-z0-9][a-z0-9./_-]{2,})",
+        r"\bn\s*[.o°]?\s*[:\-]\s*([a-z0-9][a-z0-9./_-]{2,})",
+        r"\bref(?:erence)?\s*(?:facture|fac)?\s*[:.\-]\s*([a-z0-9][a-z0-9./_-]{2,})",
+        r"\b(?:piece|document)\s*(?:n\s*[.o°]?|numero|#)?\s*[:.\-]?\s*([a-z0-9][a-z0-9./_-]{2,})",
+        r"\bfac\b\s*[:#.\-]\s*([a-z0-9][a-z0-9./_-]{2,})",
+        r"\bfact\b\s*[:#.\-]\s*([a-z0-9][a-z0-9./_-]{2,})",
     ]
     for ligne in t.splitlines():
         ln = norme(ligne)
-        if "date" in ln:
-            continue
-        if re.search(r"siret|siren|client|adherent|adhesion|interlocuteur", ln):
+        if re.search(r"\bsiret\b|\bsiren\b|\bclient\b|\badherent\b|\badhesion\b"
+                     r"|\binterlocuteur\b|\bcommande\b|\bbon\b|\blivraison\b|\bcompte\b", ln):
             continue
         for motif in motifs:
-            m = re.search(motif, ln, flags=re.IGNORECASE)
-            if m:
-                candidat = m.group(1).strip(" :.-#")
-                if len(candidat) >= 2 and candidat.lower() not in ("de", "du", "client", "no", "la"):
-                    return candidat.upper()
+            m = re.search(motif, ln)
+            if not m:
+                continue
+            candidat = _numero_valide(m.group(1))
+            if candidat:
+                return candidat
+            # le 1er mot capture etait peut-etre une date : on cherche un
+            # numero plus loin sur la meme ligne (ex. « Facture du 12/10 : FA-77 »)
+            for m2 in re.finditer(r"\b(?:fa|fac|fact|inv|in)[\-/][a-z0-9][\w./-]*\b", ln):
+                c2 = _numero_valide(m2.group(0))
+                if c2:
+                    return c2
+    # Dernier recours : un numero isole « FA-123 », « 2026-307 » sur une ligne
+    # qui parle de facture (meme sans libelle « N° »).
+    for ligne in t.splitlines():
+        ln = norme(ligne)
+        if not re.search(r"facture|invoice|\bfac\b|\bdoc", ln):
+            continue
+        for m in re.finditer(r"\b((?:fa|fac|fact|inv)[-/]?\d{1,8}(?:[-/][a-z0-9]+)*)\b", ln):
+            c = _numero_valide(m.group(1))
+            if c:
+                return c
+        for m in re.finditer(r"\b(20\d{2}[-/]\d{2,6}(?:[-/][a-z0-9]+)*)\b", ln):
+            avant = ln[:m.start()]
+            if "date" in avant or "echeance" in avant:
+                continue
+            c = _numero_valide(m.group(1))
+            if c:
+                return c
     return None
 
 
@@ -716,7 +758,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 13 · IA d'OR 🏆 · 100 % local")
+    st.caption("Version 14 · IA d'OR 🏆 · 100 % local")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
