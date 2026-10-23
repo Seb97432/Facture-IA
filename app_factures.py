@@ -948,7 +948,7 @@ def db_vider():
         try:
             cloud_vider()
         except Exception as e:
-            st.session_state["erreur_cloud"] = str(e)[:200]
+            st.error(f"Erreur Supabase : {e}")
 
 
 def db_supprimer(numero, fournisseur):
