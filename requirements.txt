@@ -4,3 +4,4 @@ pymupdf
 openpyxl
 pytesseract
 Pillow
+requests
