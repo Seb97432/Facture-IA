@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v15 - IA D'OR : moteur de trios HT/TVA/TTC, OCR DE PRECISION
-(multi-essais : 300/400 dpi, binarisation, on garde la meilleure lecture via
-un score de qualite), N° facture elargi, dates avec filets de securite."""
+"""FACTURES IA v16 - IA D'OR : moteur de trios HT/TVA/TTC, OCR FUSION
+(multi-essais : on garde les 3 meilleures lectures differentes et on les
+donne TOUTES a l'IA), reconstitution des virgules perdues par l'OCR
+(2724 lu au lieu de 27,24), N° facture elargi, dates securisees."""
 
 import re
 import io
@@ -76,30 +77,41 @@ def _ocr_image(image, psm=None):
 
 
 def _lire_page_ocr(page):
-    """Multi-essais sur une page : plusieurs résolutions et filtres,
-    on garde la lecture au meilleur score. Si un essai lit déjà très
-    bien, on s'arrête (plus rapide)."""
+    """Multi-essais sur une page : plusieurs résolutions et filtres.
+    Retourne la liste des lectures différentes, de la MEILLEURE à la
+    moins bonne (l'IA les utilisera toutes : le HT peut être bien lu
+    dans une lecture et le TTC dans une autre)."""
     essais = []
     for dpi, binariser, psm in ((300, False, None), (300, True, 6),
-                                (400, True, None), (400, False, 6)):
+                                (400, True, None), (500, True, 6)):
         pix = page.get_pixmap(dpi=dpi)
         image = _preparer_image(pix.tobytes("png"), binariser)
         txt = _ocr_image(image, psm)
         essais.append(txt)
         if _score_ocr(txt) >= 14:
             break   # très bonne lecture, inutile d'insister
-    meilleur, meilleur_score = "", -1
-    for txt in essais:
-        if _score_ocr(txt) > meilleur_score:
-            meilleur, meilleur_score = txt, _score_ocr(txt)
-    return meilleur
+    # tri par score, on élimine les lectures quasi identiques
+    classement = sorted(((_score_ocr(t), t) for t in essais), key=lambda x: -x[0])
+    retenues = []
+    for s, t in classement:
+        if s < 3:
+            continue   # lecture trop pauvre, on l'ignore
+        if any(t[:60] == t2[:60] for t2 in retenues):
+            continue   # doublon quasi identifique
+        retenues.append(t)
+        if len(retenues) >= 3:
+            break
+    if not retenues:
+        retenues = [max(essais, key=_score_ocr)]
+    return retenues
 
 
 @st.cache_data(show_spinner=False)
 def lire_texte_pdf(fichier):
     """Retourne (texte, methode) : 'texte du PDF' ou 'OCR (scan)'.
-    Pour les scans : plusieurs essais (résolution, filtres, modes de
-    lecture) et on garde la MEILLEURE lecture, puis nettoyage OCR."""
+    Pour les scans : la MEILLEURE lecture est mise en premier (pour les
+    libellés), puis les autres lectures différentes sont ajoutées en dessous
+    (pour que le moteur IA puisse croiser les montants entre les lectures)."""
     doc = None
     try:
         doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
@@ -108,8 +120,15 @@ def lire_texte_pdf(fichier):
             return texte, "texte du PDF"
         if not HAS_OCR:
             return texte, "texte du PDF"
-        pages_ocr = [_lire_page_ocr(page) for page in doc]
-        return nettoyer_ocr("\n".join(pages_ocr).strip()), "OCR (scan)"
+        principales, secondaires = [], []
+        for page in doc:
+            lectures = _lire_page_ocr(page)
+            principales.append(lectures[0])
+            secondaires.extend(lectures[1:])
+        texte_final = nettoyer_ocr("\n".join(principales).strip())
+        if secondaires:
+            texte_final += "\n" + nettoyer_ocr("\n".join(secondaires).strip())
+        return texte_final, "OCR (scan)"
     except Exception:
         return None, ""
     finally:
@@ -592,9 +611,29 @@ def moteur_ia_dor(texte_extraction):
                 essayer(ht, s_ht, ttc, s_ttc, tva, s_tva)
             essayer(ht, s_ht, ttc, s_ttc, None, 0)
 
+    # --- 2e tentative : virgules perdues par l'OCR (ex. 2724 lu au lieu de 27,24) ---
+    if meilleur["ht"] is None:
+        def _etendre(cands):
+            extra = []
+            for (p, i, v) in cands:
+                if v >= 100 and float(v).is_integer():
+                    # l'OCR a peut-être collé les centimes au montant
+                    extra.append((max(p - 2, 1), i, round(v / 100, 2)))
+            return cands + extra
+        for (s_ht, _, ht) in _etendre(ht_c):
+            for (s_ttc, _, ttc) in _etendre(ttc_c):
+                for (s_tva, _, tva) in _etendre(tva_c):
+                    essayer(ht, s_ht, ttc, s_ttc, tva, s_tva)
+                essayer(ht, s_ht, ttc, s_ttc, None, 0)
+        if meilleur["ht"] is not None:
+            notes.append("Montants reconstitués : l'OCR avait collé les centimes "
+                         "(ex. 2724 lu au lieu de 27,24). Vérifie quand même.")
+
     if meilleur["ht"] is not None:
         tva_affichee = meilleur["tva"]
-        confiance = "élevée"
+        # si les montants ont été reconstitués (virgule OCR), on reste prudent
+        confiance = ("à vérifier" if any("reconstitu" in n for n in notes)
+                     else "élevée")
         notes.append("Trio comptable validé : " + str(round(meilleur["ht"], 2)) + " + " +
                      str(round(tva_affichee, 2)) + " = " + str(round(meilleur["ttc"], 2)) + " ✔")
         return {"ht": round(meilleur["ht"], 2), "ttc": round(meilleur["ttc"], 2),
@@ -793,7 +832,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 15 · IA d'OR 🏆 · 100 % local")
+    st.caption("Version 16 · IA d'OR 🏆 · 100 % local")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -1225,4 +1264,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 15 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 16 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
