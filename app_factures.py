@@ -1061,6 +1061,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
 # 7. SIDEBAR
 # ============================================================
@@ -1068,26 +1069,39 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("Version 20 · IA d'OR 🏆")
+
     if _cloud_actif():
         _, _, utilisateur = _cloud_config()
-        st.caption("☁️ Sauvegarde permanente active (utilisateur : " + utilisateur + ")")
+        st.caption(
+            "☁️ Sauvegarde permanente active (utilisateur : "
+            + utilisateur + ")"
+        )
     else:
         st.caption("💾 Sauvegarde locale (SQLite)")
-           st.caption("Version 20 · IA d'OR 🏆")
+
+    if st.session_state.get("erreur_cloud"):
         if st.button("🔄 Réessayer maintenant", key="btn_reessayer_cloud"):
             st.session_state.pop("erreur_cloud", None)
             st.rerun()
+
     st.divider()
 
     st.markdown("### 🧭 Navigation")
     page = st.radio(
         "Choisir une page",
-        ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
-         "📤 Pour le comptable", "🤖 Assistant", "📋 Récapitulatif"],
+        [
+            "🏠 Tableau de bord",
+            "📄 Factures PDF",
+            "💰 Paiements",
+            "📤 Pour le comptable",
+            "🤖 Assistant",
+            "📋 Récapitulatif",
+        ],
         key="navigation_page",
         label_visibility="collapsed",
     )
     st.divider()
+
 
     with st.expander("🗂️ Factures de test (clique ici)"):
         st.markdown("Télécharge ces 3 PDF **différents**, puis dépose-les dans l'application :")
