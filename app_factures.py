@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v13 - IA D'OR : moteur d'analyse profonde (trios HT/TVA/TTC valides),
-tables de TVA, deduction croisee, score de confiance. + OCR + ajout en lot."""
+"""FACTURES IA v14 - IA D'OR : moteur de trios HT/TVA/TTC, OCR renforce (2 passes
+haute qualite + nettoyage OCR), lecture du N° de facture elargie (Ref, Pièce,
+Facture N° ... du 12/10/2026), dates avec filets de securite sur les scans."""
 
 import re
 import io
@@ -29,9 +30,48 @@ except Exception:
 # 1. OUTILS DE BASE
 # ============================================================
 
+def _ocr_page(page, dpi):
+    """Lance l'OCR d'une page, avec plusieurs langues en secours."""
+    pix = page.get_pixmap(dpi=dpi)
+    image = Image.open(io.BytesIO(pix.tobytes("png")))
+    if dpi >= 300:
+        try:
+            image = image.convert("L")   # niveaux de gris : meilleure lecture
+        except Exception:
+            pass
+    for lang in ("fra", "fra+eng"):
+        try:
+            return pytesseract.image_to_string(image, lang=lang)
+        except Exception:
+            try:
+                return pytesseract.image_to_string(image)
+            except Exception:
+                return ""
+    return ""
+
+
+def _ocr_lisible(texte_page):
+    return len(texte_page.strip()) >= 40 and re.search(r"\d", texte_page)
+
+
+def nettoyer_ocr(texte):
+    """Corrige les erreurs classiques de l'OCR dans les chiffres :
+    O lu a la place de 0, I/l lus a la place de 1 (uniquement autour de chiffres,
+    pour ne jamais toucher les mots)."""
+    texte = re.sub(r"(?<=\d)[Oo](?=\d)", "0", texte)
+    texte = re.sub(r"(?<=\d)[Oo](?=[ \u00a0\u202f]*[.,]\d)", "0", texte)
+    texte = re.sub(r"(?<=\d)[Il](?=\d)", "1", texte)
+    texte = re.sub(r"(?<=\d)[Il](?=[ \u00a0\u202f]*[.,]\d)", "1", texte)
+    texte = re.sub(r"(?<=\d)[Oo](?=[/\-.]\d)", "0", texte)   # dates : 1O/03/2026
+    texte = re.sub(r"(?<=[/\-.])[Oo](?=\d)", "0", texte)
+    return texte
+
+
 @st.cache_data(show_spinner=False)
 def lire_texte_pdf(fichier):
-    """Retourne (texte, methode) : 'texte du PDF' ou 'OCR (scan)'."""
+    """Retourne (texte, methode) : 'texte du PDF' ou 'OCR (scan)'.
+    Pour les scans : 1re passe a 200 dpi, et si le resultat est pauvre
+    2e passe a 350 dpi en niveaux de gris, puis nettoyage OCR."""
     doc = None
     try:
         doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
@@ -42,14 +82,12 @@ def lire_texte_pdf(fichier):
             return texte, "texte du PDF"
         pages_ocr = []
         for page in doc:
-            pix = page.get_pixmap(dpi=200)
-            image = Image.open(io.BytesIO(pix.tobytes("png")))
-            try:
-                texte_page = pytesseract.image_to_string(image, lang="fra+eng")
-            except Exception:
-                texte_page = pytesseract.image_to_string(image)
+            texte_page = _ocr_page(page, 200)
+            if not _ocr_lisible(texte_page):
+                # 2e passe : plus haute resolution + niveaux de gris
+                texte_page = _ocr_page(page, 350)
             pages_ocr.append(texte_page)
-        return "\n".join(pages_ocr).strip(), "OCR (scan)"
+        return nettoyer_ocr("\n".join(pages_ocr).strip()), "OCR (scan)"
     except Exception:
         return None, ""
     finally:
@@ -165,13 +203,17 @@ def _nombre(s):
 def _date_std(d):
     if not d:
         return None
-    m = re.match(r"(\d{1,2})/.-/.-", d)
+    m = re.match(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})", d)
     if not m:
         return d
-    j, mois, a = m.group(1), m.group(2), m.group(3)
+    j, mois, a = int(m.group(1)), int(m.group(2)), m.group(3)
     if len(a) == 2:
         a = "20" + a
-    return "%02d/%02d/%04d" % (int(j), int(mois), int(a))
+    a = int(a)
+    # Anti-bêtise OCR : une date invalide n'est pas une date
+    if not (1 <= mois <= 12 and 1 <= j <= 31 and 1990 <= a <= 2099):
+        return None
+    return "%02d/%02d/%04d" % (j, mois, a)
 
 
 def extraire_dates_ligne(ligne):
@@ -220,6 +262,7 @@ def extraire_numero(t):
         r"\bn\s*[.o]?\s*(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
         r"\bfacture\s*:\s*([a-z0-9][a-z0-9./_-]*)",
         r"\binvoice\s*(?:(?:no|number|#)\s*)?[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        # Formats reels frequents : "Facture 2026-123", "F/2026/001", "N° : FA-123"
         r"\bfactures?\s+(\d[\w./-]{2,})",
         r"\bf\s*/\s*n\s*[:.\-]?\s*([a-z0-9][a-z0-9./_-]+)",
         r"\bn[.o]?\s*[:]\s*([a-z0-9][a-z0-9./_-]{2,})",
@@ -239,10 +282,21 @@ def extraire_numero(t):
     return None
 
 
+def _toutes_les_dates(t):
+    toutes = []
+    for ligne in t.splitlines():
+        for d in extraire_dates_ligne(ligne):
+            if d not in toutes:
+                toutes.append(d)
+    return toutes
+
+
 def extraire_date_facture(t):
     lignes = t.splitlines()
     etiquettes = (r"date\s*(?:de\s*)?(?:facture|emission|d.emission)", r"invoice\s*date",
-                  r"emise?\s*(?:le|:)", r"date\s*facture", r"issued\s*on")
+                  r"emise?\s*(?:le|:)", r"date\s*facture", r"issued\s*on",
+                  # formats reels : « Facture du 12/10/2026 », « Facture 12/10/2026 »
+                  r"facture\s+(?:du|de|emise\s+le)?\s*\d{1,2}[/.\-]")
     for i, ligne in enumerate(lignes):
         ln = norme(ligne)
         if any(re.search(e, ln) for e in etiquettes):
@@ -253,6 +307,18 @@ def extraire_date_facture(t):
                 dates = extraire_dates_ligne(lignes[i + 1])
                 if dates:
                     return dates[0]
+    # Filet de securite (scans sans libelle) :
+    # - une ligne qui parle de facture et contient une date
+    # - sinon, si le document n'a qu'UNE date, on la propose
+    for ligne in lignes:
+        ln = norme(ligne)
+        if re.search(r"facture|invoice", ln):
+            dates = extraire_dates_ligne(ligne)
+            if dates:
+                return dates[0]
+    toutes = _toutes_les_dates(t)
+    if len(toutes) == 1:
+        return toutes[0]
     return None
 
 
@@ -271,6 +337,11 @@ def extraire_date_echeance(t):
                 dates = extraire_dates_ligne(lignes[i + 1])
                 if dates:
                     return dates[-1]
+    # Filet de securite : si le document a exactement 2 dates, l'echeance
+    # est tres souvent la 2e (la 1e etant la date de facture).
+    toutes = _toutes_les_dates(t)
+    if len(toutes) == 2:
+        return toutes[1]
     return None
 
 
@@ -306,9 +377,12 @@ def taux_tva_multiples(t):
 # ============================================================
 # 3bis. MOTEUR IA D'OR - analyse profonde avec validation croisee
 # ============================================================
-# Le moteur collecte TOUS les montants candidats (HT, TTC, TVA, tables de TVA)
-# puis teste tous les trios. Il ne garde que ceux ou HT + TVA = TTC.
+# Principe : au lieu de croire UNE etiquette, le moteur collecte TOUS les
+# montants candidats (HT, TTC, TVA, tables de TVA) puis teste tous les trios.
+# Il ne garde que les trios qui respectent la regle d'or : HT + TVA = TTC.
+# Chaque resultat arrive avec un score de confiance et des notes d'analyse.
 
+# Etiquettes avec leur "poids" (10 = tres precis, 3 = vague)
 HT_ETIQ = [
     (r"total\s*hors\s*taxe", 10), (r"montant\s*total\s*ht", 9), (r"total\s*ht\b", 9),
     (r"montant\s*ht\b", 7), (r"subtotal", 6), (r"sous[- ]total", 6), (r"\bht\b", 3),
@@ -344,6 +418,7 @@ def _collecter_candidats(lignes, tableau_etiq):
         for etq, poids in tableau_etiq:
             if not re.search(etq, ln):
                 continue
+            # le "total" vague ne peut pas designer une ligne HT ou TVA
             if etq == r"\btotal\b" and re.search(r"ht\b|hors\s*taxe|tva\b|vat\b|subtotal|sous[- ]total", ln):
                 break
             for m in _montants_sur_ligne(ligne):
@@ -362,6 +437,7 @@ def _somme_table_tva(lignes):
         idx = ligne.find("%")
         apres = _montants_sur_ligne(ligne[idx + 1:])
         ln = norme(ligne)
+        # uniquement si la ligne parle de TVA/taux ou ressemble a une ligne de table
         if re.search(r"tva|vat|taxe|taux|base", ln) or len(apres) >= 2:
             if apres:
                 bases.append(apres[0])
@@ -370,11 +446,13 @@ def _somme_table_tva(lignes):
 
 
 def moteur_ia_dor(texte_extraction):
-    """Analyse profonde : cherche le TRIO coherent HT + TVA = TTC le mieux note."""
+    """Analyse profonde : cherche le TRIO coherent HT + TVA = TTC le mieux
+    note. Retourne ht, ttc, tva, taux, confiance, notes."""
     t = norme(texte_extraction)
     lignes = texte_extraction.splitlines()
     notes = []
 
+    # --- Taux de TVA ---
     taux = None
     m = re.search(r"(?:tva|vat|taxe)[^0-9%]{0,25}(\d{1,2}[.,]?\d{0,2})\s*%", t)
     if m:
@@ -386,6 +464,7 @@ def moteur_ia_dor(texte_extraction):
     if len(taux_list) > 1:
         notes.append("Plusieurs taux de TVA sur la facture : " + ", ".join(taux_list) + " %.")
 
+    # --- Collecte des candidats ---
     ht_c = _collecter_candidats(lignes, HT_ETIQ)[:10]
     ttc_c = _collecter_candidats(lignes, TTC_ETIQ)[:12]
     tva_c = _collecter_candidats(lignes, TVA_ETIQ)[:12]
@@ -393,6 +472,7 @@ def moteur_ia_dor(texte_extraction):
     if montants_table:
         notes.append("Table de TVA détectée (" + str(len(montants_table)) +
                      " ligne(s)) — somme des montants TVA : " + str(round(sum(montants_table), 2)) + ".")
+    # base HT de la table = bon candidat HT aussi
     if bases_table and sum(bases_table) > 0:
         ht_c.append((8, -1, round(sum(bases_table), 2)))
     if montants_table:
@@ -406,15 +486,17 @@ def moteur_ia_dor(texte_extraction):
             return
         if tva is not None and tva < 0:
             return
+        # 1) trio complet : HT + TVA = TTC ?
         if tva is not None:
             if abs(ht + tva - ttc) <= max(0.02, ttc * 0.005):
                 score = s_ht + s_ttc + s_tva + 30
                 if taux:
                     attendu = ht * taux / 100
                     if abs(attendu - tva) <= max(0.02, abs(attendu) * 0.03):
-                        score += 10
+                        score += 10  # le taux confirme la TVA
                 if score > meilleur["score"]:
                     meilleur = {"score": score, "ht": ht, "ttc": ttc, "tva": tva}
+        # 2) TVA deduite : TTC - HT (verifiee avec le taux si connu)
         else:
             tva_calc = round(ttc - ht, 2)
             if tva_calc > 0:
@@ -434,21 +516,23 @@ def moteur_ia_dor(texte_extraction):
             essayer(ht, s_ht, ttc, s_ttc, None, 0)
 
     if meilleur["ht"] is not None:
+        tva_affichee = meilleur["tva"]
+        confiance = "élevée"
         notes.append("Trio comptable validé : " + str(round(meilleur["ht"], 2)) + " + " +
-                     str(round(meilleur["tva"], 2)) + " = " + str(round(meilleur["ttc"], 2)) + " ✔")
+                     str(round(tva_affichee, 2)) + " = " + str(round(meilleur["ttc"], 2)) + " ✔")
         return {"ht": round(meilleur["ht"], 2), "ttc": round(meilleur["ttc"], 2),
-                "tva": round(meilleur["tva"], 2), "taux": taux,
-                "confiance": "élevée", "notes": notes}
+                "tva": round(tva_affichee, 2), "taux": taux,
+                "confiance": confiance, "notes": notes}
 
-    # Aucun trio coherent : extraction par etiquettes (ancienne methode)
+    # --- Aucun trio coherent trouve : extraction par etiquettes (ancienne methode) ---
     ht_old = extraire_montant(t, [r"total\s*hors\s*taxes", r"total\s*ht", r"montant\s*ht",
                                   r"subtotal", r"sous[- ]total", r"\bht\b"])
     ttc_old = extraire_montant(t, [r"net\s*a\s*payer", r"total\s*(?:à|a)\s*payer", r"amount\s*due",
                                    r"balance\s*due", r"total\s*ttc", r"montant\s*ttc",
                                    r"grand\s*total", r"total\s*general", r"\bttc\b", r"\btotal\b"])
     tva_old = None
-    if montants_table:
-        tva_old = round(sum(montants_table), 2)
+    if montant_table_local := (sum(montants_table) if montants_table else None):
+        tva_old = round(montant_table_local, 2)
     else:
         tva_old = extraire_montant(t, [r"montant\s*(?:de\s*)?(?:tva|vat|taxe)",
                                        r"(?:tva|vat)\b.*montant", r"\btva\b", r"\bvat\b"])
@@ -704,6 +788,18 @@ if "recap" not in st.session_state:
 
 CHAMPS = ["Fournisseur", "N° facture", "Date facture", "Date échéance",
           "Montant HT", "Taux TVA (%)", "Montant TVA", "Montant TTC", "Devise", "Payée ?"]
+EXPLIQUES = {
+    "Fournisseur": "L'entreprise qui a envoyé la facture",
+    "N° facture": "Le numéro unique écrit sur la facture",
+    "Date facture": "Le jour où la facture a été émise (JJ/MM/AAAA)",
+    "Date échéance": "La date limite de paiement (JJ/MM/AAAA)",
+    "Montant HT": "Prix hors taxes",
+    "Taux TVA (%)": "Le pourcentage de TVA appliqué (ex. 20)",
+    "Montant TVA": "Le montant de la taxe",
+    "Montant TTC": "Le total à payer, taxes comprises",
+    "Devise": "EUR, USD...",
+    "Payée ?": "OUI si la facture a été payée, NON sinon",
+}
 
 
 def _val(x):
@@ -726,6 +822,7 @@ def traiter_facture(f):
         texte_extraction = texte
     t = norme(texte_extraction)
 
+    # === MOTEUR IA D'OR ===
     analyse = moteur_ia_dor(texte_extraction)
 
     donnees = {
@@ -767,6 +864,7 @@ if page == "🏠 Tableau de bord":
 
 fichiers = None
 if page == "📄 Factures PDF":
+    # Message du dernier ajout en lot (survit au rerun)
     if st.session_state.get("rapport_lot"):
         r = st.session_state.pop("rapport_lot")
         st.success("✅ **" + str(r["ajoutees"]) + " facture(s) ajoutée(s) au récapitulatif.**")
@@ -794,6 +892,7 @@ if page == "📄 Factures PDF" and fichiers:
         else:
             resultats.append({"f": f, "illisible": False, **res})
 
+    # --- Resume + bouton d'ajout EN LOT ---
     valides, a_corriger, illisibles = [], [], []
     for r in resultats:
         if r["illisible"]:
@@ -828,6 +927,7 @@ if page == "📄 Factures PDF" and fichiers:
     if a_corriger:
         st.caption("ℹ️ Les factures « à corriger » doivent être complétées/validées une par une dans leur carte ci-dessous.")
 
+    # --- Affichage detaille, fichier par fichier ---
     for r in resultats:
         f = r["f"]
         if r["illisible"]:
@@ -852,6 +952,7 @@ if page == "📄 Factures PDF" and fichiers:
 
         with st.expander("📄 " + f.name + "   " + badge + " · lecture : " + r["methode"],
                          expanded=(len(resultats) == 1)):
+            # Notes d'analyse de l'IA d'OR
             if r["notes"]:
                 for note in r["notes"]:
                     st.info("🧠 **IA d'OR** : " + note)
@@ -901,6 +1002,7 @@ if page == "📄 Factures PDF" and fichiers:
                 st.session_state["recap"] = db_charger()
                 st.rerun()
 
+            # Diagnostic : texte lu par l'application
             with st.expander("🔍 Diagnostic — texte lu par l'application"):
                 st.caption("Copie-colle ce texte dans notre conversation si un champ est faux : "
                            "je corrige la règle de lecture.")
@@ -928,6 +1030,7 @@ if page == "📋 Récapitulatif":
         m3.metric("Total TTC", str(round(tot_ttc, 2)))
         m4.metric("Reste à payer", str(round(sum(_val(v) or 0 for v in impayees["Montant TTC"]), 2)))
 
+        # Alertes de retard de paiement
         aujourdhui = datetime.date.today()
         en_retard = []
         for _, r in impayees.iterrows():
@@ -948,6 +1051,7 @@ if page == "📋 Récapitulatif":
         if len(impayees) == 0 and len(df_recap) > 0:
             st.success("🎉 Toutes les factures sont payées !")
 
+        # Barre de recherche
         recherche = st.text_input("🔍 Rechercher (fournisseur, n° de facture, montant...)", key="recherche_recap")
         df_affiche = df_recap.copy()
         if recherche.strip():
@@ -957,6 +1061,7 @@ if page == "📋 Récapitulatif":
             df_affiche = df_affiche[masque]
             st.caption(str(len(df_affiche)) + " facture(s) trouvée(s) sur " + str(len(df_recap)) + ".")
 
+        # Marquer payee / non payee
         with st.expander("✅ Marquer une facture comme payée / non payée"):
             c_num, c_etat, c_ok = st.columns([2, 1, 1])
             num_paye = c_num.text_input("N° de facture", key="num_paye")
@@ -974,12 +1079,14 @@ if page == "📋 Récapitulatif":
                 elif num_paye.strip():
                     st.warning("Aucune facture avec ce numéro.")
 
+        # Statistiques par fournisseur
         with st.expander("📊 Statistiques par fournisseur"):
             stats = df_recap.groupby("Fournisseur")["Montant TTC"].agg(["count", "sum"])
             stats.columns = ["Nombre de factures", "Total TTC"]
             st.dataframe(stats.sort_values("Total TTC", ascending=False),
                          use_container_width=True)
 
+        # Graphique : factures par mois
         with st.expander("📈 Montant TTC par mois"):
             def _mois(d):
                 m = re.match(r"(\d{2})/(\d{2})/(\d{4})", str(d))
@@ -1041,4 +1148,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 13 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 14 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
