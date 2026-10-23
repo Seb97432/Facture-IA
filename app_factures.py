@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v17 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures,
-SUIVI DES PAIEMENTS (partiel, historique, confirmation humaine, retards,
-echeances a venir) et PACK COMPTABLE (selection, CSV parametrable, ZIP avec
-PDF originaux). Regle d'or : jamais inventer, jamais 'payee' sans toi."""
+"""FACTURES IA v18 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures,
+suivi des paiements PRO (modes avec icones, annulation, historique), pack
+comptable organise PAR MOIS, export parametrable (separateur, encodage,
+dates, decimales) et ASSISTANT IA local qui repond aux questions sur tes
+factures. Regle d'or : jamais inventer, jamais 'payee' sans confirmation."""
 
 import re
 import io
@@ -833,14 +834,14 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 17 · IA d'OR 🏆 · 100 % local")
+    st.caption("Version 18 · IA d'OR 🏆 · 100 % local")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
     page = st.radio(
         "Choisir une page",
         ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
-         "📤 Pour le comptable", "📋 Récapitulatif"],
+         "📤 Pour le comptable", "🤖 Assistant", "📋 Récapitulatif"],
         key="navigation_page",
         label_visibility="collapsed",
     )
@@ -986,6 +987,134 @@ def _date_depuis_txt(d):
         return None
 
 
+# ---------- MODES DE PAIEMENT (comme un vrai site) ----------
+
+MODES_PAIEMENT = ["🏦 Virement", "💳 Carte bancaire", "✍️ Chèque",
+                  "💶 Espèces", "🔁 Prélèvement", "📱 Autre"]
+
+
+# ---------- ASSISTANT IA (v18) ----------
+
+def repondre_question(question, lignes):
+    """Assistant 100 % local : répond UNIQUEMENT avec les factures
+    enregistrées. Jamais d'invention, jamais d'accès Internet."""
+    if not lignes:
+        return ("Aucune facture enregistrée pour l'instant. Ajoute des factures "
+                "dans « 📄 Factures PDF » et repose-moi ta question 😉")
+    q = norme(question)
+    n = len(lignes)
+    intro = "D'après tes **" + str(n) + "** facture(s) enregistrée(s) :\n\n"
+    tot_ttc = sum(_val(l.get("Montant TTC")) or 0 for l in lignes)
+    tot_ht = sum(_val(l.get("Montant HT")) or 0 for l in lignes)
+    tot_tva = sum(_val(l.get("Montant TVA")) or 0 for l in lignes)
+    tot_paye = sum(_val(l.get("Montant payé")) or 0 for l in lignes)
+    reste_total = round(tot_ttc - tot_paye, 2)
+    aujourdhui_a = datetime.date.today()
+
+    # Retards
+    if "retard" in q:
+        ret = []
+        for l in lignes:
+            if str(l.get("Payée ?", "")).upper() == "OUI":
+                continue
+            d = _date_depuis_txt(l.get("Date échéance"))
+            if d and d < aujourdhui_a:
+                ret.append(l)
+        if not ret:
+            return intro + "✅ Aucune facture en retard de paiement."
+        txt = intro + "🚨 **" + str(len(ret)) + "** facture(s) en retard :\n"
+        for l in ret:
+            txt += ("- " + str(l.get("Fournisseur")) + " n° " + str(l.get("N° facture")) +
+                    " — échéance " + str(l.get("Date échéance")) + ", reste " +
+                    str(_reste_a_payer(l)) + " " + str(l.get("Devise", "")) + "\n")
+        return txt
+
+    # Question sur UN fournisseur précis
+    for l in lignes:
+        f = str(l.get("Fournisseur", "")).strip()
+        if f and len(f) >= 3 and norme(f) in q:
+            factures_f = [x for x in lignes if norme(str(x.get("Fournisseur", ""))) == norme(f)]
+            ttc_f = sum(_val(x.get("Montant TTC")) or 0 for x in factures_f)
+            paye_f = sum(_val(x.get("Montant payé")) or 0 for x in factures_f)
+            return (intro + "🏢 **" + f + "** : " + str(len(factures_f)) +
+                    " facture(s) · TTC " + str(round(ttc_f, 2)) +
+                    " · payé " + str(round(paye_f, 2)) +
+                    " · reste " + str(round(ttc_f - paye_f, 2)))
+
+    # Prochaines échéances
+    if "prochain" in q or "echeance" in q or "a venir" in q:
+        futures = [(d, l) for l in lignes
+                   if str(l.get("Payée ?", "")).upper() != "OUI"
+                   for d in [_date_depuis_txt(l.get("Date échéance"))] if d and d >= aujourdhui_a]
+        futures.sort(key=lambda x: x[0])
+        if not futures:
+            return intro + "Aucune échéance à venir."
+        txt = intro + "⏳ Prochaines échéances :\n"
+        for d, l in futures[:5]:
+            txt += ("- le " + d.strftime("%d/%m/%Y") + " : " + str(l.get("Fournisseur")) +
+                    " n° " + str(l.get("N° facture")) + ", reste " + str(_reste_a_payer(l)) + "\n")
+        return txt
+
+    # Moyens de paiement
+    if "moyen" in q or "mode" in q or "comment" in q and "paie" in q:
+        compte = {}
+        for l in lignes:
+            for p in (l.get("Historique paiements") or []):
+                m_ = str(p.get("mode", "?"))
+                compte[m_] = compte.get(m_, 0) + 1
+        if not compte:
+            return intro + "Aucun paiement enregistré pour l'instant (page « 💰 Paiements »)."
+        txt = intro + "💳 Paiements enregistrés, par moyen :\n"
+        for m_, nb in sorted(compte.items(), key=lambda x: -x[1]):
+            txt += "- " + m_ + " : " + str(nb) + " paiement(s)\n"
+        return txt
+
+    # Combien de factures
+    if "combien" in q and "facture" in q and "total" not in q and "reste" not in q:
+        payees = sum(1 for l in lignes if _statut_paiement(l) == "Payée")
+        partielles = sum(1 for l in lignes if _statut_paiement(l) == "Partiellement payée")
+        return (intro + "📊 **" + str(n) + "** facture(s) : " + str(payees) +
+                " payée(s), " + str(partielles) + " partiellement payée(s), " +
+                str(n - payees - partielles) + " non payée(s).")
+
+    # Reste à payer / dette
+    if any(m in q for m in ("reste", "dois", "impay", "dette")):
+        impayees = [l for l in lignes if _statut_paiement(l) != "Payée"]
+        txt = (intro + "💸 **Reste à payer au total : " + str(max(reste_total, 0.0)) +
+               "** sur " + str(len(impayees)) + " facture(s) non réglée(s).")
+        if impayees:
+            txt += "\n\nDétail :\n"
+            for l in impayees:
+                txt += ("- " + str(l.get("Fournisseur")) + " n° " + str(l.get("N° facture")) +
+                        " : reste " + str(_reste_a_payer(l)) + "\n")
+        return txt
+
+    # TVA
+    if "tva" in q:
+        return (intro + "🧮 Total TVA : **" + str(round(tot_tva, 2)) + "** (HT " +
+                str(round(tot_ht, 2)) + " → TTC " + str(round(tot_ttc, 2)) + ").")
+
+    # Payé
+    if "paye" in q and ("combien" in q or "total" in q or "deja" in q):
+        return (intro + "💰 Déjà payé : **" + str(round(tot_paye, 2)) + "** sur " +
+                str(round(tot_ttc, 2)) + " facturés (reste " + str(max(reste_total, 0.0)) + ").")
+
+    # Totaux
+    if "combien" in q or "total" in q or "montant" in q or "chiffre" in q:
+        return (intro + "📊 Total HT : **" + str(round(tot_ht, 2)) + "** · Total TTC : **" +
+                str(round(tot_ttc, 2)) + "** · Payé : **" + str(round(tot_paye, 2)) +
+                "** · Reste : **" + str(max(reste_total, 0.0)) + "**.")
+
+    # Aide
+    return ("Je ne suis pas sûr de comprendre 🤔 Essaie par exemple :\n"
+            "- *Combien me reste-t-il à payer ?*\n"
+            "- *Quelles factures sont en retard ?*\n"
+            "- *Quelles sont les prochaines échéances ?*\n"
+            "- *Combien de TVA au total ?*\n"
+            "- *Combien dois-je à ENTREPRISE DUPONT ?*\n"
+            "- *Par quels moyens ai-je payé ?*")
+
+
 def traiter_facture(f):
     """Lit un PDF et retourne tout ce qui a ete extrait + le statut + l'analyse IA d'OR."""
     texte, methode = lire_texte_pdf(f)
@@ -1034,6 +1163,27 @@ if page == "🏠 Tableau de bord":
         c2.metric("Total HT", str(round(sum(_val(v) or 0 for v in df_dashboard["Montant HT"]), 2)))
         c3.metric("Total TTC", str(round(sum(_val(v) or 0 for v in df_dashboard["Montant TTC"]), 2)))
         c4.metric("Fournisseurs différents", df_dashboard["Fournisseur"].nunique())
+        # v18 : vue paiements directement sur le tableau de bord
+        tot_paye_d = sum(_val(r.get("Montant payé")) or 0 for r in st.session_state["recap"])
+        tot_ttc_d = sum(_val(v) or 0 for v in df_dashboard["Montant TTC"])
+        d1, d2, d3 = st.columns(3)
+        d1.metric("💰 Déjà payé", str(round(tot_paye_d, 2)))
+        d2.metric("💸 Reste à payer", str(max(round(tot_ttc_d - tot_paye_d, 2), 0.0)))
+        ajd_d = datetime.date.today()
+        retards_d = []
+        for r in st.session_state["recap"]:
+            if str(r.get("Payée ?", "")).upper() == "OUI":
+                continue
+            ech_d = _date_depuis_txt(r.get("Date échéance"))
+            if ech_d and ech_d < ajd_d:
+                retards_d.append(r)
+        d3.metric("🚨 En retard", str(len(retards_d)))
+        for r in retards_d:
+            st.error("🚨 **" + str(r.get("Fournisseur", "?")) + "** n° " +
+                     str(r.get("N° facture", "?")) + " — échéance dépassée depuis le " +
+                     str(r.get("Date échéance")) + " · reste " + str(_reste_a_payer(r)))
+        if not retards_d and tot_ttc_d - tot_paye_d > 0.005:
+            st.success("✅ Aucune facture en retard de paiement.")
         st.dataframe(df_dashboard, use_container_width=True, hide_index=True)
         st.caption("Les factures enregistrées survivent à la fermeture de l'application (fichier factures.db).")
 
@@ -1247,9 +1397,7 @@ if page == "💰 Paiements":
                 montant_p = cp1.number_input("Montant du paiement", min_value=0.0,
                                              max_value=float(reste_p), value=0.0, step=1.0)
                 date_p = cp2.date_input("Date du paiement", aujourdhui_p)
-                mode_p = cp3.selectbox("Moyen de paiement",
-                                       ["Virement", "Carte bancaire", "Chèque",
-                                        "Espèces", "Prélèvement", "Autre"])
+                mode_p = cp3.selectbox("Moyen de paiement", MODES_PAIEMENT)
                 note_p = cp4.text_input("Note (facultatif)", "")
                 if st.button("✅ Enregistrer ce paiement", type="primary",
                              use_container_width=True, key="btn_paiement"):
@@ -1304,6 +1452,28 @@ if page == "💰 Paiements":
                         maj["Payée ?"] = "OUI"
                         db_remplacer_numero(l, maj)
                         st.session_state["recap"] = db_charger()
+                        st.rerun()
+                # v18 : annuler le dernier paiement (erreur de saisie, chèque refusé...)
+                cle_annul = "annuler_" + str(l.get("N° facture")) + "_" + str(l.get("Fournisseur"))
+                if l.get("Historique paiements"):
+                    if st.button("↩️ Annuler le dernier paiement", key=cle_annul):
+                        payes_a = list(l.get("Historique paiements") or [])
+                        dernier_a = payes_a.pop()
+                        maj_a = dict(l)
+                        maj_a["Historique paiements"] = payes_a
+                        maj_a["Montant payé"] = round(
+                            max(_montant_paye(l) - float(dernier_a.get("montant", 0) or 0), 0.0), 2)
+                        # si la facture était confirmée payée, elle redevient à vérifier
+                        if str(l.get("Payée ?", "")).upper() == "OUI":
+                            maj_a["Payée ?"] = "NON"
+                        db_remplacer_numero(l, maj_a)
+                        st.session_state["recap"] = db_charger()
+                        st.success("Dernier paiement annulé (" + str(dernier_a.get("montant")) +
+                                   " " + str(dernier_a.get("mode", "")) + " du " +
+                                   str(dernier_a.get("date", "")) + ").")
+                        if str(l.get("Payée ?", "")).upper() == "OUI":
+                            st.warning("⚠️ La facture est repassée en « NON payée » : "
+                                        "confirme son statut quand c'est réglé.")
                         st.rerun()
 
         # --- Tableau de suivi global ---
@@ -1377,14 +1547,30 @@ if page == "📤 Pour le comptable":
         else:
             st.warning("Aucune facture ne correspond à ces filtres — change la sélection ci-dessus.")
 
-        # --- Export CSV paramétrable ---
+        # --- Export CSV paramétrable (adapté au logiciel du comptable) ---
         st.markdown("#### 📄 Export CSV adapté au logiciel comptable")
-        ec1, ec2 = st.columns(2)
-        separateur_c = ec1.radio("Séparateur", [";", ","], horizontal=True)
+        ec1, ec2, ec3, ec4 = st.columns(4)
+        separateur_c = ec1.radio("Séparateur", [";", ",", "Tabulation"], horizontal=True)
         encodage_c = ec2.radio("Encodage", ["UTF-8 avec BOM (recommandé Excel)",
                                             "UTF-8 simple"], horizontal=True)
-        csv_c = _df_comptable(retenues_c).to_csv(index=False, sep=separateur_c)
-        csv_c_bytes = csv_c.encode("utf-8-sig" if "BOM" in encodage_c else "utf-8")
+        format_date_c = ec3.radio("Format des dates", ["JJ/MM/AAAA", "AAAA-MM-JJ"],
+                                  horizontal=True)
+        decimal_c = ec4.radio("Décimales", ["Point (1250.50)", "Virgule (1250,50)"],
+                              horizontal=True)
+        df_c = _df_comptable(retenues_c)
+        if format_date_c == "AAAA-MM-JJ":
+            for col_date in ("DATE_PIECE", "DATE_ECHEANCE"):
+                df_c[col_date] = df_c[col_date].apply(
+                    lambda d: (str(d)[6:10] + "-" + str(d)[3:5] + "-" + str(d)[0:2]
+                               if re.match(r"\d{2}/\d{2}/\d{4}", str(d)) else d))
+        if decimal_c.startswith("Virgule"):
+            for col_num in ("MONTANT_HT", "TAUX_TVA", "MONTANT_TVA", "MONTANT_TTC",
+                            "MONTANT_PAYE", "RESTE_A_PAYER"):
+                df_c[col_num] = df_c[col_num].apply(
+                    lambda v: str(v).replace(".", ",") if str(v) not in ("", "None") else v)
+        sep_final = "\t" if separateur_c == "Tabulation" else separateur_c
+        csv_c_bytes = df_c.to_csv(index=False, sep=sep_final).encode(
+            "utf-8-sig" if "BOM" in encodage_c else "utf-8")
         st.download_button("⬇️ Export CSV comptable (" + str(len(retenues_c)) + " factures)",
                            csv_c_bytes, file_name="export_comptable.csv", mime="text/csv",
                            use_container_width=True, key="dl_cpt_csv")
@@ -1410,8 +1596,11 @@ if page == "📤 Pour le comptable":
                 for l in retenues_c:
                     nom_f, chemin_f = _nom_pdf(l)
                     if os.path.exists(chemin_f):
+                        # v18 : les PDF sont rangés PAR MOIS dans le pack
+                        d_f = _date_depuis_txt(l.get("Date facture"))
+                        sous_dossier = "PDF/" + (d_f.strftime("%Y-%m") if d_f else "date_inconnue")
                         with open(chemin_f, "rb") as pf:
-                            z.writestr("PDF/" + nom_f, pf.read())
+                            z.writestr(sous_dossier + "/" + nom_f, pf.read())
                         pdfs_inclus += 1
                     else:
                         manquants.append(str(l.get("Fournisseur", "?")) + " n° " +
@@ -1439,6 +1628,31 @@ if page == "📤 Pour le comptable":
         st.caption("🔒 Tout reste sur ton ordinateur : le pack est fabriqué chez toi, "
                    "rien n'est envoyé sur Internet. C'est toi qui transmets le fichier "
                    "à ton comptable, par le canal que tu choisis.")
+
+# ---------- PAGE : ASSISTANT IA (v18) ----------
+
+if page == "🤖 Assistant":
+    st.markdown("### 🤖 Assistant Factures IA")
+    st.caption("Pose-moi une question sur **TES** factures enregistrées. "
+               "Je réponds uniquement avec tes données : jamais d'invention, "
+               "100 % local, rien n'est envoyé sur Internet.")
+    suggestions_a = ["Combien me reste-t-il à payer ?", "Quelles factures sont en retard ?",
+                     "Quelles sont les prochaines échéances ?", "Combien de TVA au total ?",
+                     "Par quels moyens ai-je payé ?", "Total de mes factures ?"]
+    sug_cols = st.columns(3)
+    for i_a, sugg in enumerate(suggestions_a):
+        if sug_cols[i_a % 3].button(sugg, key="sugg_" + str(i_a), use_container_width=True):
+            st.session_state["question_ia"] = sugg
+            st.rerun()
+    question_a = st.text_input("Ta question", key="question_ia",
+                               placeholder="Ex : combien dois-je à ENTREPRISE DUPONT ?")
+    if question_a.strip():
+        reponse_a = repondre_question(question_a, st.session_state["recap"])
+        st.markdown(reponse_a)
+        st.caption("🧠 Réponse calculée uniquement à partir de tes factures enregistrées. "
+                   "En cas de doute, vérifie toujours dans « 📋 Récapitulatif ».")
+    else:
+        st.info("👆 Choisis une question exemple ou écris la tienne.")
 
 # ---------- PAGE : RECAPITULATIF ----------
 
@@ -1589,4 +1803,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 17 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 18 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
