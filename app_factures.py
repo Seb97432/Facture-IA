@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v24 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v25 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
@@ -777,8 +777,7 @@ def auth_connexion(email, motdepasse):
     d = r.json()
     if not d.get("access_token") or not d.get("user", {}).get("id"):
         return None, "Connexion refusée par Supabase."
-    return {"token": d["access_token"], "id": str(d["user"]["id"]),
-            "email": str(d.get("user", {}).get("email", email))}, None
+    return _faire_session(d, email), None
 
 
 def auth_inscription(email, motdepasse):
@@ -799,8 +798,7 @@ def auth_inscription(email, motdepasse):
     d = r.json()
     if d.get("access_token") and d.get("user", {}).get("id"):
         # cas rare : confirmation desactivee cote Supabase -> deja connecte
-        return {"token": d["access_token"], "id": str(d["user"]["id"]),
-                "email": str(d.get("user", {}).get("email", email))}, None
+        return _faire_session(d, email), None
     # compte cree : il faut maintenant le code recu par mail
     return "code_a_confirmer", None
 
@@ -819,8 +817,7 @@ def auth_verifier_code(email, code):
     d = r.json()
     if not d.get("access_token") or not d.get("user", {}).get("id"):
         return None, "Confirmation refusée par Supabase."
-    return {"token": d["access_token"], "id": str(d["user"]["id"]),
-            "email": str(d.get("user", {}).get("email", email))}, None
+    return _faire_session(d, email), None
 
 
 def auth_oublie(email):
@@ -857,14 +854,50 @@ def auth_recuperer(email, code, nouveau_mdp):
                        json={"password": nouveau_mdp}, timeout=20)
     if r2.status_code != 200:
         return None, "Code accepté mais nouveau mot de passe refusé (trop court ?)."
-    return {"token": token, "id": str(d["user"]["id"]),
-            "email": str(d.get("user", {}).get("email", email))}, None
+    session = _faire_session(d, email)
+    session["token"] = token   # on garde le jeton de recuperation actif
+    return session, None
 
 
 def _session():
     """La session de l'utilisateur connecte (ou None si personne ne
     l'est). Stockee dans st.session_state, donc propre a CE navigateur."""
     return st.session_state.get("session_utilisateur")
+
+
+def _faire_session(d, email):
+    """Construit l'objet session a partir d'une reponse Supabase Auth.
+    On garde le jeton (token), le jeton de RAFRAICHISSEMENT (refresh),
+    l'UUID unique et l'email."""
+    return {"token": d["access_token"], "refresh": d.get("refresh_token"),
+            "id": str(d["user"]["id"]),
+            "email": str(d.get("user", {}).get("email", email))}
+
+
+def _sb_rafraichir_session():
+    """Quand le jeton expire (~1 h), Supabase fournit un jeton de
+    rafraichissement : on l'utilise pour rester connecte SANS redemander
+    le mot de passe. Retourne True si la session a ete renouvelee."""
+    url, key = _cloud_config()
+    s = _session()
+    if not s or not s.get("refresh"):
+        return False
+    try:
+        r = requests.post(url + "/auth/v1/token?grant_type=refresh_token",
+                          headers={"apikey": key},
+                          json={"refresh_token": s["refresh"]}, timeout=20)
+        if r.status_code != 200:
+            return False
+        d = r.json()
+        if not d.get("access_token"):
+            return False
+        s["token"] = d["access_token"]
+        if d.get("refresh_token"):
+            s["refresh"] = d["refresh_token"]
+        st.session_state["session_utilisateur"] = s
+        return True
+    except Exception:
+        return False
 
 
 def _uid_courant():
@@ -883,11 +916,21 @@ def _sb_requete(methode, chemin, donnees=None, params=None, jeton=None):
     cote serveur : meme ce code ne peut pas voir les factures d'un autre."""
     url, key = _cloud_config()
     token = jeton or _session()["token"]
-    entetes = {"apikey": key, "Authorization": "Bearer " + token,
-               "Content-Type": "application/json"}
-    r = requests.request(methode, url + chemin, headers=entetes,
-                         json=donnees, params=params, timeout=20)
+    for essai in (1, 2):
+        entetes = {"apikey": key, "Authorization": "Bearer " + token,
+                   "Content-Type": "application/json"}
+        r = requests.request(methode, url + chemin, headers=entetes,
+                             json=donnees, params=params, timeout=20)
+        if r.status_code == 401 and essai == 1 and not jeton:
+            # jeton expire : on le renouvelle et on REESSAIE une fois
+            if _sb_rafraichir_session():
+                token = _session()["token"]
+                continue
+            auth_deconnexion()
+            raise RuntimeError("session expiree")
+        break
     if r.status_code == 401:
+        auth_deconnexion()
         raise RuntimeError("session expiree")
     if r.status_code >= 400:
         extrait = ""
@@ -1200,6 +1243,21 @@ st.markdown("""
 .carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #f87171;}
 .carte-kpi.bleu {border-color: #2c3350;}   .carte-kpi.bleu .kpi-val {color: #a5b4fc;}
 
+/* ---- v25 : sections de la sidebar + finitions ---- */
+.section-titre {
+    color: #a5b4fc; font-weight: 800; font-size: .74rem;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    margin: .65rem 0 .25rem 0;
+    border-bottom: 1px solid #262c37; padding-bottom: .3rem;
+}
+div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label {
+    padding: .28rem .5rem; border-radius: 9px; transition: background .15s;
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1c2130;}
+div[data-testid="stExpander"] {margin-bottom: .45rem;}
+
+
 /* ---- v21 : confort sur telephone ---- */
 @media (max-width: 640px) {
     .block-container {padding: .7rem .8rem 2rem .8rem; max-width: 100%;}
@@ -1234,7 +1292,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 24 · IA d'OR 🏆")
+    st.caption("Version 25 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1392,6 +1450,9 @@ with st.sidebar:
     )
     st.divider()
 
+    st.markdown('<p class="section-titre">📚 Aides & démonstration</p>',
+                unsafe_allow_html=True)
+
     with st.expander("🗂️ Factures de test (clique ici)"):
         st.markdown("Télécharge ces 3 PDF **différents**, puis dépose-les dans l'application :")
         st.download_button("📄 1 : française classique",
@@ -1438,6 +1499,9 @@ with st.sidebar:
 
         🧮 **Règle d'or : HT + TVA = TTC.**
         """)
+    st.markdown('<p class="section-titre">⚖️ Légal, données & configuration</p>',
+                unsafe_allow_html=True)
+
     with st.expander("⚖️ Mentions légales, confidentialité & pilote"):
         st.markdown("""**⚠️ Ce qu'est Facture IA (et ce qu'elle n'est PAS)**
 
@@ -2592,4 +2656,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 24 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 25 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
