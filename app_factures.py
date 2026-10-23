@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v20 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v22 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
-SAUVEGARDE PERMANENTE via Supabase (si configure dans les Secrets) avec
-MIGRATION SECURISEE depuis SQLite (l'ancien fichier factures.db est GARDE).
+COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
+est liee a l'UUID du compte, regles RLS cote serveur, separation totale
+des donnees entre utilisateurs. Sauvegarde permanente + MIGRATION
+SECURISEE depuis SQLite (l'ancien fichier factures.db est GARDE).
 Regle d'or : jamais inventer, jamais 'payee' sans confirmation humaine."""
 
 import re
@@ -719,19 +721,23 @@ def est_doublon(ligne, existantes):
     return False, None
 
 # ============================================================
-# 5. SAUVEGARDE : SQLite (local) + SUPABASE (permanente, facultatif)
 # ============================================================
-# Principe v20 :
-#  - Si les Secrets contiennent une configuration Supabase, les factures
-#    sont enregistrees DURABLEMENT sur Supabase (elles survivent aux
-#    redemarrages et redeploiements de Streamlit Cloud, et sont
-#    accessibles depuis n'importe quel appareil).
-#  - Sinon, on retombe sur SQLite (fichier factures.db), comme avant.
-#  - En cas d'erreur reseau, la facture est sauvegardee en SQLite pour
-#    ne JAMAIS la perdre, et un bouton de migration permet de l'envoyer
-#    plus tard sur Supabase.
-#  - Chaque ligne porte un identifiant d'utilisateur : les donnees sont
-#    separees par utilisateur (et Supabase doit activer la RLS, voir guide).
+# 5. SAUVEGARDE + AUTHENTIFICATION (Supabase Auth)
+# ============================================================
+# Principe v22 - SECURITE REELLE :
+#  - Chaque utilisateur possede un VRAI compte (email + mot de passe)
+#    gere par Supabase Auth. A la connexion, Supabase fournit un jeton
+#    (token) propre a cet utilisateur.
+#  - Chaque facture est liee a l'IDENTIFIANT UNIQUE (UUID) du compte,
+#    pas a un nom ni a un email.
+#  - Toutes les requetes vers Supabase partent avec CE jeton, et les
+#    regles RLS cote serveur n'autorisent l'acces QU'AUX factures de
+#    l'utilisateur connecte. Ce n'est pas juste un filtre d'affichage :
+#    meme un code modifie ne peut pas lire les factures d'un autre.
+#  - Si Supabase n'est pas configure : mode local (comme avant).
+#  - SQLite local : colonne 'utilisateur' ajoutee, chaque ligne est
+#    marquee par l'UUID de son proprietaire (les vieilles lignes sont
+#    'ancien' et revendicables par le bouton de recuperation).
 
 DOSSIER = os.path.dirname(os.path.abspath(__file__))
 BDD = os.path.join(DOSSIER, "factures.db")
@@ -739,15 +745,13 @@ BDD = os.path.join(DOSSIER, "factures.db")
 
 def _cloud_config():
     """Lit la configuration Supabase dans les Secrets Streamlit.
-    Retourne (url, key, utilisateur) ou None si rien n'est configure.
-    Les secrets ne sont JAMAIS affiches ni ecrits dans le code."""
+    Retourne (url, cle_anon) ou None. Les secrets ne sont JAMAIS affiches."""
     try:
         conf = st.secrets["factures_ia"]
         url = str(conf.get("supabase_url", "")).strip().rstrip("/")
         key = str(conf.get("supabase_key", "")).strip()
-        utilisateur = str(conf.get("utilisateur", "proprietaire")).strip() or "proprietaire"
         if url and key:
-            return url, key, utilisateur
+            return url, key
     except Exception:
         pass
     return None
@@ -758,14 +762,76 @@ def _cloud_actif():
     return HAS_REQUESTS and _cloud_config() is not None
 
 
-def _sb_requete(methode, chemin, donnees=None, params=None):
-    """Appel REST vers Supabase. Retourne la reponse JSON.
-    Fait remonter une exception claire en cas de probleme."""
-    url, key, utilisateur = _cloud_config()
-    entetes = {"apikey": key, "Authorization": "Bearer " + key,
+# ---------- AUTHENTIFICATION (Supabase Auth) ----------
+
+def auth_connexion(email, motdepasse):
+    """Connecte un utilisateur. Retourne (session, None) ou (None, message).
+    La session contient le jeton (token) et l'UUID unique du compte."""
+    url, key = _cloud_config()
+    r = requests.post(url + "/auth/v1/token?grant_type=password",
+                      headers={"apikey": key},
+                      json={"email": email.strip(), "password": motdepasse},
+                      timeout=20)
+    if r.status_code != 200:
+        return None, "Email ou mot de passe incorrect."
+    d = r.json()
+    if not d.get("access_token") or not d.get("user", {}).get("id"):
+        return None, "Connexion refusée par Supabase."
+    return {"token": d["access_token"], "id": str(d["user"]["id"]),
+            "email": str(d.get("user", {}).get("email", email))}, None
+
+
+def auth_inscription(email, motdepasse):
+    """Cree un compte. Retourne (session, None) ou (None, message).
+    Si Supabase exige une confirmation par email, on le dit clairement."""
+    url, key = _cloud_config()
+    r = requests.post(url + "/auth/v1/signup",
+                      headers={"apikey": key},
+                      json={"email": email.strip(), "password": motdepasse},
+                      timeout=20)
+    if r.status_code != 200:
+        try:
+            msg = r.json().get("msg") or r.json().get("error_description") or str(r.json())[:120]
+        except Exception:
+            msg = str(r.status_code)
+        return None, "Inscription impossible : " + str(msg)
+    d = r.json()
+    if d.get("access_token") and d.get("user", {}).get("id"):
+        return {"token": d["access_token"], "id": str(d["user"]["id"]),
+                "email": str(d.get("user", {}).get("email", email))}, None
+    # compte cree mais email non confirme
+    return None, ("📧 Compte créé. Va dans ta boîte mail et clique sur le lien "
+                   "de confirmation, puis connecte-toi ici.")
+
+
+def _session():
+    """La session de l'utilisateur connecte (ou None si personne ne
+    l'est). Stockee dans st.session_state, donc propre a CE navigateur."""
+    return st.session_state.get("session_utilisateur")
+
+
+def _uid_courant():
+    """UUID unique de l'utilisateur connecte, ou 'local' en mode local."""
+    s = _session()
+    return s["id"] if s else "local"
+
+
+def auth_deconnexion():
+    st.session_state.pop("session_utilisateur", None)
+
+
+def _sb_requete(methode, chemin, donnees=None, params=None, jeton=None):
+    """Appel REST vers Supabase, TOUJOURS avec le jeton de l'utilisateur
+    connecte (jamais une cle privilegiee). Les regles RLS s'appliquent
+    cote serveur : meme ce code ne peut pas voir les factures d'un autre."""
+    url, key = _cloud_config()
+    token = jeton or _session()["token"]
+    entetes = {"apikey": key, "Authorization": "Bearer " + token,
                "Content-Type": "application/json"}
     r = requests.request(methode, url + chemin, headers=entetes,
                          json=donnees, params=params, timeout=20)
+    if r.status_code == 401:
+        raise RuntimeError("session expiree")
     if r.status_code >= 400:
         extrait = ""
         try:
@@ -783,7 +849,7 @@ def _cle(ligne):
             str(ligne.get("Fournisseur", "")).lower().strip())
 
 
-# ---------- Couche SQLite (locale, comme avant) ----------
+# ---------- Couche SQLite (locale, chaque ligne marquee par son UUID) ----------
 
 def db_connexion():
     return sqlite3.connect(BDD)
@@ -794,71 +860,87 @@ def db_creer():
         c.execute("""CREATE TABLE IF NOT EXISTS factures (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             donnees TEXT NOT NULL,
-            date_ajout TEXT NOT NULL)""")
+            date_ajout TEXT NOT NULL,
+            utilisateur TEXT NOT NULL DEFAULT 'ancien')""")
+        colonnes = [r[1] for r in c.execute("PRAGMA table_info(factures)").fetchall()]
+        if "utilisateur" not in colonnes:
+            # ancienne base sans la colonne : ajout sans rien perdre
+            c.execute("ALTER TABLE factures ADD COLUMN utilisateur TEXT NOT NULL DEFAULT 'ancien'")
 
 
-def sqlite_charger():
+def sqlite_charger(uid):
     db_creer()
     with db_connexion() as c:
-        lignes = c.execute("SELECT donnees FROM factures ORDER BY id").fetchall()
+        lignes = c.execute("SELECT donnees FROM factures WHERE utilisateur = ? ORDER BY id",
+                           (uid,)).fetchall()
     return [json.loads(l[0]) for l in lignes]
 
 
-def sqlite_ajouter(ligne):
+def sqlite_ajouter(ligne, uid):
     db_creer()
     with db_connexion() as c:
-        c.execute("INSERT INTO factures (donnees, date_ajout) VALUES (?, ?)",
-                  (json.dumps(ligne, ensure_ascii=False), datetime.date.today().isoformat()))
+        c.execute("INSERT INTO factures (donnees, date_ajout, utilisateur) VALUES (?, ?, ?)",
+                  (json.dumps(ligne, ensure_ascii=False),
+                   datetime.date.today().isoformat(), uid))
 
 
-def sqlite_remplacer_numero(ancien, nouveau):
+def sqlite_remplacer_numero(ancien, nouveau, uid):
     db_creer()
     with db_connexion() as c:
-        for (i, donnees_txt) in c.execute("SELECT id, donnees FROM factures").fetchall():
+        for (i, donnees_txt) in c.execute(
+                "SELECT id, donnees FROM factures WHERE utilisateur = ?", (uid,)).fetchall():
             d = json.loads(donnees_txt)
             if _cle(d) == _cle(ancien):
                 c.execute("UPDATE factures SET donnees = ? WHERE id = ?",
                           (json.dumps(nouveau, ensure_ascii=False), i))
 
 
-def sqlite_vider():
-    with db_connexion() as c:
-        c.execute("DELETE FROM factures")
-
-
-def sqlite_supprimer(numero, fournisseur):
+def sqlite_vider(uid):
     db_creer()
     with db_connexion() as c:
-        for (i, donnees_txt) in c.execute("SELECT id, donnees FROM factures").fetchall():
+        c.execute("DELETE FROM factures WHERE utilisateur = ?", (uid,))
+
+
+def sqlite_supprimer(numero, fournisseur, uid):
+    db_creer()
+    with db_connexion() as c:
+        for (i, donnees_txt) in c.execute(
+                "SELECT id, donnees FROM factures WHERE utilisateur = ?", (uid,)).fetchall():
             d = json.loads(donnees_txt)
             if _cle(d) == (str(numero).upper() + "|" + str(fournisseur).lower()):
                 c.execute("DELETE FROM factures WHERE id = ?", (i,))
 
 
-# ---------- Couche Supabase (permanente, si configuree) ----------
+def sqlite_revendiquer(uid):
+    """Recuperation des ANCIENNES factures (mode avant comptes) : elles
+    sont marquee 'ancien' et deviennent la propriete de l'utilisateur
+    connecte. Ne touche jamais les lignes des autres utilisateurs."""
+    db_creer()
+    with db_connexion() as c:
+        n = c.execute("SELECT COUNT(*) FROM factures WHERE utilisateur = 'ancien'").fetchone()[0]
+        c.execute("UPDATE factures SET utilisateur = ? WHERE utilisateur = 'ancien'", (uid,))
+    return n
+
+
+# ---------- Couche Supabase (permanente, protegee par RLS) ----------
 
 def cloud_charger():
-    """Toutes les factures de CET utilisateur (jamais celles des autres)."""
-    _, _, utilisateur = _cloud_config()
-    lignes = _sb_requete("GET", "/rest/v1/factures",
-                         params={"utilisateur": "eq." + utilisateur, "order": "id",
-                                 "select": "donnees"}) or []
+    """Les factures de l'utilisateur connecte UNIQUEMENT : filtre par son
+    UUID et, en plus, RLS cote serveur refuse tout le reste."""
+    params = {"utilisateur": "eq." + _uid_courant(), "order": "id", "select": "donnees"}
+    lignes = _sb_requete("GET", "/rest/v1/factures", params=params) or []
     return [l["donnees"] for l in lignes if isinstance(l.get("donnees"), dict)]
 
 
 def cloud_ajouter(ligne):
-    _, _, utilisateur = _cloud_config()
     _sb_requete("POST", "/rest/v1/factures",
-                donnees={"utilisateur": utilisateur, "donnees": ligne,
+                donnees={"utilisateur": _uid_courant(), "donnees": ligne,
                          "date_ajout": datetime.date.today().isoformat()})
 
 
 def cloud_tout_pour_utilisateur():
-    """[(id, donnees)] : id Supabase + contenu, pour modifier/supprimer."""
-    _, _, utilisateur = _cloud_config()
-    lignes = _sb_requete("GET", "/rest/v1/factures",
-                         params={"utilisateur": "eq." + utilisateur,
-                                 "select": "id,donnees"}) or []
+    params = {"utilisateur": "eq." + _uid_courant(), "select": "id,donnees"}
+    lignes = _sb_requete("GET", "/rest/v1/factures", params=params) or []
     return [(l["id"], l["donnees"]) for l in lignes if isinstance(l.get("donnees"), dict)]
 
 
@@ -879,24 +961,29 @@ def cloud_supprimer(numero, fournisseur):
 
 
 def cloud_vider():
-    _, _, utilisateur = _cloud_config()
     _sb_requete("DELETE", "/rest/v1/factures",
-                params={"utilisateur": "eq." + utilisateur})
+                params={"utilisateur": "eq." + _uid_courant()})
 
 
 # ---------- FONCTIONS PRINCIPALES (utilisees par l'application) ----------
-# Elles choisissent seules ou lire/ecrire : Supabase si configure, sinon
-# SQLite. En cas d'erreur reseau on bascule sur SQLite (perte de donnees
-# interdite), et la fusion locale evite tout doublon.
+# Quand Supabase est configure, il faut ETRE CONNECTE : les donnees
+# vivent dans le cloud, separees par UUID. Sinon, mode local comme avant.
 
 def db_charger():
+    uid = _uid_courant()
     if _cloud_actif():
+        if not _session():
+            return []
         try:
             cloud = cloud_charger()
         except Exception as e:
+            if "session expiree" in str(e):
+                auth_deconnexion()
+                st.session_state["erreur_cloud"] = "Session expirée : reconnecte-toi."
+                return []
             st.session_state["erreur_cloud"] = str(e)[:200]
             cloud = []
-        locales = sqlite_charger()
+        locales = sqlite_charger(uid)
         # Fusion : les factures locales absentes du cloud sont ajoutees
         # (cas d'une facture sauvegardee pendant une panne reseau).
         vues = {_cle(l) for l in cloud}
@@ -905,29 +992,30 @@ def db_charger():
             if _cle(l) not in vues and str(l.get("N° facture", "")).strip():
                 fusion.append(l)
         return fusion
-    return sqlite_charger()
+    return sqlite_charger(uid)
 
 
 def db_ajouter(ligne):
-    # Toujours une copie locale : c'est ta sauvegarde de secours.
+    uid = _uid_courant()
     try:
-        sqlite_ajouter(ligne)
+        sqlite_ajouter(ligne, uid)   # copie locale de secours, marquee a ton UUID
     except Exception:
         pass
-    if _cloud_actif():
+    if _cloud_actif() and _session():
         try:
             cloud_ajouter(ligne)
         except Exception as e:
-            st.session_state["erreur_cloud"] = str(e)[:200]
-            st.session_state["a_migrer"] = True
+            if "session expiree" not in str(e):
+                st.session_state["erreur_cloud"] = str(e)[:200]
 
 
 def db_remplacer_numero(ancien, nouveau):
+    uid = _uid_courant()
     try:
-        sqlite_remplacer_numero(ancien, nouveau)
+        sqlite_remplacer_numero(ancien, nouveau, uid)
     except Exception:
         pass
-    if _cloud_actif():
+    if _cloud_actif() and _session():
         try:
             cloud_remplacer_numero(ancien, nouveau)
         except Exception as e:
@@ -935,11 +1023,12 @@ def db_remplacer_numero(ancien, nouveau):
 
 
 def db_vider():
+    uid = _uid_courant()
     try:
-        sqlite_vider()
+        sqlite_vider(uid)   # UNIQUEMENT les lignes de cet utilisateur
     except Exception:
         pass
-    if _cloud_actif():
+    if _cloud_actif() and _session():
         try:
             cloud_vider()
         except Exception as e:
@@ -947,11 +1036,12 @@ def db_vider():
 
 
 def db_supprimer(numero, fournisseur):
+    uid = _uid_courant()
     try:
-        sqlite_supprimer(numero, fournisseur)
+        sqlite_supprimer(numero, fournisseur, uid)
     except Exception:
         pass
-    if _cloud_actif():
+    if _cloud_actif() and _session():
         try:
             cloud_supprimer(numero, fournisseur)
         except Exception as e:
@@ -959,16 +1049,15 @@ def db_supprimer(numero, fournisseur):
 
 
 def migrer_vers_supabase():
-    """Migration SECURISEE : lit le fichier local factures.db, envoie sur
-    Supabase uniquement les factures absentes du cloud, verifie le
-    resultat, et NE SUPPRIME JAMAIS le fichier local (il reste en
-    sauvegarde de secours). Retourne (envoyees, total_cloud)."""
-    if not _cloud_actif():
+    """Migration SECURISEE : envoie sur Supabase uniquement TES factures
+    locales absentes du cloud, verifie le resultat, et NE SUPPRIME JAMAIS
+    le fichier local. Retourne (envoyees, total_cloud) ou (None, None)."""
+    if not (_cloud_actif() and _session()):
         return None, None
     cloud = cloud_charger()
     vues = {_cle(l) for l in cloud}
     envoyees = 0
-    for l in sqlite_charger():
+    for l in sqlite_charger(_uid_courant()):
         if not str(l.get("N° facture", "")).strip():
             continue
         if _cle(l) in vues:
@@ -979,7 +1068,7 @@ def migrer_vers_supabase():
     cloud = cloud_charger()
     return envoyees, len(cloud)
 
-# ============================================================
+
 # 6. DESIGN - THEME SOMBRE
 # ============================================================
 
@@ -1088,12 +1177,57 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 20 · IA d'OR 🏆")
+    st.caption("Version 22 · IA d'OR 🏆")
+
+    # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
-        _, _, utilisateur = _cloud_config()
-        st.caption("☁️ Sauvegarde permanente active (utilisateur : " + utilisateur + ")")
+        if _session():
+            st.success("👤 Connecté : **" + _session()["email"] + "**")
+            if st.button("🚪 Se déconnecter", key="btn_deconnexion", use_container_width=True):
+                auth_deconnexion()
+                st.session_state["recap"] = []
+                st.rerun()
+        else:
+            st.markdown("### 🔐 Ton compte")
+            onglet_co, onglet_inscrit = st.tabs(["Se connecter", "Créer un compte"])
+            with onglet_co:
+                email_co = st.text_input("Email", key="email_co")
+                mdp_co = st.text_input("Mot de passe", type="password", key="mdp_co")
+                if st.button("Se connecter", key="btn_connexion", use_container_width=True):
+                    if not email_co.strip() or not mdp_co:
+                        st.warning("Écris ton email et ton mot de passe.")
+                    else:
+                        session, err = auth_connexion(email_co, mdp_co)
+                        if session:
+                            st.session_state["session_utilisateur"] = session
+                            st.session_state["recap"] = db_charger()
+                            st.rerun()
+                        else:
+                            st.error(err)
+            with onglet_inscrit:
+                email_in = st.text_input("Email", key="email_in")
+                mdp_in = st.text_input("Mot de passe (12 caractères ou plus, jamais réutilisé)",
+                                       type="password", key="mdp_in")
+                mdp_in2 = st.text_input("Confirme le mot de passe", type="password", key="mdp_in2")
+                if st.button("Créer mon compte", key="btn_inscription", use_container_width=True):
+                    if not email_in.strip() or not mdp_in:
+                        st.warning("Écris ton email et un mot de passe.")
+                    elif mdp_in != mdp_in2:
+                        st.warning("Les deux mots de passe ne sont pas identiques.")
+                    elif "@" not in email_in:
+                        st.warning("Cette adresse email ne semble pas valide.")
+                    elif len(mdp_in) < 8:
+                        st.warning("Mot de passe trop court (minimum 8, idéalement 12+).")
+                    else:
+                        session, err = auth_inscription(email_in, mdp_in)
+                        if session:
+                            st.session_state["session_utilisateur"] = session
+                            st.session_state["recap"] = db_charger()
+                            st.rerun()
+                        else:
+                            st.info(err)
     else:
-        st.caption("💾 Sauvegarde locale (SQLite)")
+        st.caption("💾 Sauvegarde locale (SQLite) — mode sans compte")
     if st.session_state.get("erreur_cloud"):
         st.error("⚠️ Problème de connexion à la sauvegarde en ligne : les données ont été "
                  "gardées en local. Détail : " + str(st.session_state["erreur_cloud"]))
@@ -1163,33 +1297,37 @@ with st.sidebar:
             st.markdown("""**Mode sauvegarde permanente (activé)** :
 
             - Tes factures validées (et leurs paiements) sont enregistrées dans
-            une base **Supabase** en ligne, configurée par **toi** via les
-            Secrets Streamlit. Elles survivent aux redémarrages, aux
-            redéploiements et sont accessibles depuis plusieurs appareils.
-            - Une **copie locale** (fichier `factures.db`) reste sur la machine
-            comme sauvegarde de secours.
-            - Chaque utilisateur n'accède qu'à **ses propres** factures
-            (colonne `utilisateur` + RLS Supabase à activer, voir le guide).
+            une base **Supabase** en ligne. Elles survivent aux redémarrages,
+            aux redéploiements et sont accessibles depuis plusieurs appareils.
+            - **Chaque facture est liée à l'identifiant unique (UUID) de TON
+            compte**. Les règles RLS de Supabase, vérifiées **côté serveur**,
+            empêchent tout autre compte de lire, modifier ou supprimer tes
+            factures — et t'empêchent d'accéder à celles des autres.
+            - Une **copie locale** (fichier `factures.db`) reste sur la machine,
+            marquée à ton UUID, comme sauvegarde de secours.
             - Les **PDF originaux** ne sont PAS envoyés en ligne : seul le
             résumé (fournisseur, n°, dates, montants, paiements) part dans
             la base. Ne mets jamais de secret ou mot de passe dans le code
             ou sur GitHub.""")
-            if st.button("📤 Envoyer mes factures locales vers la sauvegarde en ligne",
-                         key="btn_migrer_sb", use_container_width=True):
-                try:
-                    envoyees, total = migrer_vers_supabase()
-                    if envoyees is None:
-                        st.error("Sauvegarde en ligne non configurée.")
-                    elif envoyees == 0:
-                        st.success("✅ Rien à envoyer : tout est déjà sauvegardé en ligne "
-                                   "(" + str(total) + " factures).")
-                    else:
-                        st.success("✅ " + str(envoyees) + " facture(s) envoyée(s). "
-                                   "Vérification : " + str(total) + " facture(s) en ligne au total. "
-                                   "Ton fichier local factures.db est conservé intact.")
-                    st.session_state["recap"] = db_charger()
-                except Exception as e:
-                    st.error("Migration interrompue (aucune donnée perdue) : " + str(e)[:200])
+            if _session():
+                if st.button("📤 Envoyer mes factures locales vers la sauvegarde en ligne",
+                             key="btn_migrer_sb", use_container_width=True):
+                    try:
+                        envoyees, total = migrer_vers_supabase()
+                        if envoyees is None:
+                            st.error("Connecte-toi d'abord.")
+                        elif envoyees == 0:
+                            st.success("✅ Rien à envoyer : tout est déjà sauvegardé en ligne "
+                                       "(" + str(total) + " factures).")
+                        else:
+                            st.success("✅ " + str(envoyees) + " facture(s) envoyée(s). "
+                                       "Vérification : " + str(total) + " facture(s) en ligne au total. "
+                                       "Ton fichier local factures.db est conservé intact.")
+                        st.session_state["recap"] = db_charger()
+                    except Exception as e:
+                        st.error("Migration interrompue (aucune donnée perdue) : " + str(e)[:200])
+            else:
+                st.caption("Connecte-toi pour voir le bouton d'envoi de tes factures.")
         else:
             st.markdown("""Tout est traité **sur la machine où l'application tourne** :
                         les factures validées sont sauvegardées dans le fichier `factures.db`
@@ -1203,56 +1341,113 @@ with st.sidebar:
                         **local**, ou **exporte régulièrement** tes factures (CSV / Excel
                         dans le Récapitulatif).""")
 
-    with st.expander("☁️ Sauvegarde permanente : mode d'emploi"):
+    with st.expander("☁️ Comptes + sauvegarde permanente : mode d'emploi"):
         st.markdown("""
-        Pour que tes factures **survivent sur Streamlit Cloud** (et soient
-        accessibles depuis ton téléphone ou un autre PC), branche une base
-        **Supabase** gratuite. Étapes (une par une) :
+        Pour que tes factures **survivent sur Streamlit Cloud**, avec de **vrais
+        comptes séparés** (email + mot de passe), suis ces étapes une par une :
 
         **1.** Crée un compte sur https://supabase.com puis un nouveau projet
         (nom libre, ex. `factures-ia`, mot de passe fort, région Europe).
 
-        **2.** Dans ton projet Supabase → **SQL Editor**, colle ce code et
-        clique sur *Run* :""")
-        st.code("""create table factures (
+        **2.** Dans Supabase → **Authentication → Providers** : vérifie que
+        **Email** est activé (c'est le cas par défaut). Conseillé pour toi :
+        **Authentication → Settings → désactive « Confirm email »** pour que
+        les comptes soient utilisables immédiatement.
+
+        **3.** Dans **SQL Editor**, colle ce code et clique sur *Run* :""")
+        st.code("""create table if not exists factures (
   id bigint generated by default as identity primary key,
-  utilisateur text not null default 'proprietaire',
+  utilisateur text not null,
   donnees jsonb not null,
   date_ajout date not null default now()
 );
 
 alter table factures enable row level security;
 
-create policy "acces proprietaire" on factures
+drop policy if exists "acces proprietaire" on factures;
+
+create policy "chacun les siennes" on factures
   for all
-  using (utilisateur = 'proprietaire');""", language="sql")
+  using (auth.uid()::text = utilisateur)
+  with check (auth.uid()::text = utilisateur);""", language="sql")
         st.markdown("""
-        **3.** Dans Supabase → **Settings → API** : copie l'**URL** du projet
+        ⚠️ **Si tu avais déjà des factures en ligne** (mode avant comptes,
+        marquées `proprietaire`) : elles ne peuvent pas être réattribuées
+        depuis l'application. Colle ce code dans SQL Editor **après ta
+        première inscription** (remplace TON_EMAIL) — c'est ta migration :""")
+        st.code("""update factures
+set utilisateur = (select id from auth.users where email = 'TON_EMAIL')
+where utilisateur = 'proprietaire';""", language="sql")
+        st.markdown("""
+        **4.** Dans Supabase → **Settings → API** : copie l'**URL** du projet
         et la clé **anon / public** (jamais la clé `service_role`).
 
-        **4.** Sur Streamlit Cloud → ton app → **Settings → Secrets**, colle :""")
+        **5.** Sur Streamlit Cloud → ton app → **Settings → Secrets**, colle :""")
         st.code("""[factures_ia]
 supabase_url = "https://TON-PROJET.supabase.co"
 supabase_key = "TA-CLE-ANON-PUBLIC"
-utilisateur = "proprietaire"
 """, language="toml")
         st.markdown("""
-        **5.** **Redémarre l'application** : la mention ☁️ « Sauvegarde
-        permanente active » apparaît dans la barre latérale, et un bouton
-        **📤 d'envoi** de tes factures locales vers le cloud apparaît dans
-        l'expander 🛡️ juste au-dessus. Ton fichier `factures.db` local est
-        toujours conservé comme sauvegarde de secours.
+        **6.** **Redémarre l'application** : la barre latérale propose
+        « Se connecter » et « **Créer un compte** ». Crée ton compte, puis
+        utilise le bouton **📤** (expander 🛡️) pour envoyer tes factures
+        locales vers ton espace en ligne. Ton fichier `factures.db` local
+        est toujours conservé comme sauvegarde de secours.
 
-        **Sécurité** : la clé reste dans les Secrets Streamlit, jamais dans
-        le code ni sur GitHub. Avec la RLS activée (étape 2), chaque
-        utilisateur ne voit que ses propres factures. Pour ajouter un
-        deuxième utilisateur : crée un autre compte Streamlit Cloud avec
-        un autre `utilisateur` dans les Secrets et une seconde *policy*
-        Supabase.""")
+        **Sécurité** : la clé anon reste dans les Secrets Streamlit, jamais
+        dans le code ni sur GitHub. Grâce à Supabase Auth + RLS, chaque
+        compte ne voit **que ses propres factures** — même si quelqu'un
+        modifie le code de l'application, le serveur Supabase refuse.""")
 
 # ============================================================
 # 8. TRAITEMENT
 # ============================================================
+
+# ---------- PORTE D'ENTREE : connexion obligatoire si Supabase est configure ----------
+# Tant que l'utilisateur n'est pas connecte, AUCUNE donnee n'est affichee :
+# on ne peut donc jamais voir, meme par accident, les factures d'un autre.
+if _cloud_actif() and not _session():
+    st.markdown("### 🔐 Connecte-toi pour accéder à tes factures")
+    st.markdown("""Cette application utilise de **vrais comptes** : chaque utilisateur ne voit,
+    ne modifie et ne supprime que **ses propres factures** — c'est vérifié côté serveur
+    par Supabase (règles RLS), pas seulement à l'affichage.
+
+    👉 Dans la barre latérale (menu de gauche) : **Se connecter** ou **Créer un compte**.""")
+    st.info("💾 Mode local disponible : si la sauvegarde en ligne n'est pas configurée "
+            "(Secrets), l'application fonctionne sans compte, comme avant.")
+    st.stop()
+
+# ---------- RECUPERATION des anciennes factures (mode avant comptes) ----------
+if _session() and st.session_state.get("proposer_recup") is None:
+    try:
+        anciennes = 0
+        db_creer()
+        with db_connexion() as c:
+            anciennes = c.execute(
+                "SELECT COUNT(*) FROM factures WHERE utilisateur = 'ancien'").fetchone()[0]
+        st.session_state["proposer_recup"] = anciennes
+    except Exception:
+        st.session_state["proposer_recup"] = 0
+
+if _session() and st.session_state.get("proposer_recup"):
+    with st.expander("🎁 Récupérer mes anciennes factures (" +
+                     str(st.session_state["proposer_recup"]) + ")"):
+        st.markdown("Tes factures enregistrées **avant la création des comptes** sont "
+                    "conservées. Elles appartiennent maintenant à ton compte.")
+        c_r1, c_r2 = st.columns(2)
+        if c_r1.button("🎁 Les récupérer", key="btn_recup", use_container_width=True):
+            try:
+                n = sqlite_revendiquer(_uid_courant())
+                st.session_state["proposer_recup"] = 0
+                st.session_state["recap"] = db_charger()
+                st.success("✅ " + str(n) + " facture(s) récupérée(s) sur ce compte. "
+                           "Utilise ensuite le bouton 📤 pour les envoyer en ligne.")
+                st.rerun()
+            except Exception as e:
+                st.error("Récupération impossible : " + str(e)[:200])
+        if c_r2.button("❌ Les ignorer", key="btn_recup_non", use_container_width=True):
+            st.session_state["proposer_recup"] = 0
+            st.rerun()
 
 if "recap" not in st.session_state:
     st.session_state["recap"] = db_charger()
@@ -2196,4 +2391,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 20 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 22 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
