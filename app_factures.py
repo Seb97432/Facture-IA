@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v9 - OCR Tesseract + extraction par position + suivi paiements + stats."""
+"""FACTURES IA v11 - OCR + position + ajout EN LOT des factures valides (jusqu'a 200 fichiers)."""
 
 import re
 import io
@@ -28,39 +28,26 @@ except Exception:
 # 1. OUTILS DE BASE
 # ============================================================
 
-
-
 @st.cache_data(show_spinner=False)
 def lire_texte_pdf(fichier):
     doc = None
     try:
-        doc = pymupdf.open(
-            stream=fichier.getvalue(),
-            filetype="pdf"
-        )
-
+        doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
         texte = "\n".join(page.get_text() for page in doc).strip()
-
         if len(texte) >= 40:
             return texte
-
-        import pytesseract
-        from PIL import Image
-        import io
-
+        if not HAS_OCR:
+            return texte
         pages_ocr = []
         for page in doc:
             pix = page.get_pixmap(dpi=200)
             image = Image.open(io.BytesIO(pix.tobytes("png")))
-
-            texte_page = pytesseract.image_to_string(
-                image,
-                lang="fra+eng"
-            )
+            try:
+                texte_page = pytesseract.image_to_string(image, lang="fra+eng")
+            except Exception:
+                texte_page = pytesseract.image_to_string(image)
             pages_ocr.append(texte_page)
-
         return "\n".join(pages_ocr).strip()
-
     except Exception:
         return None
     finally:
@@ -70,43 +57,23 @@ def lire_texte_pdf(fichier):
 
 @st.cache_data(show_spinner=False)
 def lignes_par_position(fichier):
-    """Reconstruit les lignes VISUELLES grace aux coordonnees des mots.
-    Corrige les PDF ou l'ordre du texte brut est melange (colonnes, tableaux)."""
+    """Reconstruit les lignes VISUELLES grace aux coordonnees des mots."""
     try:
         doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
         lignes = []
         for page in doc:
-            mots = page.get_text("words")  # (x0, y0, x1, y1, mot, ...)
+            mots = page.get_text("words")
             par_y = {}
             for m in mots:
-                cle = round(m[1] / 4)  # tolerance verticale
+                cle = round(m[1] / 4)
                 par_y.setdefault(cle, []).append(m)
             for cle in sorted(par_y):
-                mots_ligne = sorted(par_y[cle], key=lambda m: m[0])  # gauche -> droite
+                mots_ligne = sorted(par_y[cle], key=lambda m: m[0])
                 lignes.append(" ".join(m[4] for m in mots_ligne))
         doc.close()
         return lignes
     except Exception:
         return None
-
-
-@st.cache_data(show_spinner=False)
-def ocr_pdf(fichier, _progress=None):
-    """OCR (Tesseract) pour les PDF scannes : chaque page devient image puis texte."""
-    doc = pymupdf.open(stream=fichier.getvalue(), filetype="pdf")
-    textes = []
-    for page in doc:
-        pix = page.get_pixmap(dpi=300)
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        try:
-            textes.append(pytesseract.image_to_string(img, lang="fra+eng"))
-        except Exception:
-            try:
-                textes.append(pytesseract.image_to_string(img, lang="fra"))
-            except Exception:
-                textes.append(pytesseract.image_to_string(img))
-    doc.close()
-    return "\n".join(textes).strip()
 
 
 def norme(t):
@@ -244,34 +211,24 @@ def extraire_montant(t, etiquettes):
 
 
 def extraire_numero(t):
-    """Extrait le numéro de facture avec plusieurs formats de libellés."""
-
+    """Extrait le numero de facture avec plusieurs formats de libelles."""
     motifs = [
-        r"\bfacture\s*(?:n\s*[°ºo.]|numero|number|#)\s*[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\bnumero\s+(?:de\s+)?facture\s*[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\bn\s*[°ºo.]?\s*(?:de\s+)?facture\s*[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\bfacture\s*[:：]\s*([a-z0-9][a-z0-9./_-]*)",
-        r"\binvoice\s*(?:(?:no|number|n°|#)\s*)?[:：#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bfacture\s*(?:n\s*[.o]|numero|number|#)\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bnumero\s+(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bn\s*[.o]?\s*(?:de\s+)?facture\s*[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\bfacture\s*:\s*([a-z0-9][a-z0-9./_-]*)",
+        r"\binvoice\s*(?:(?:no|number|#)\s*)?[:#.\-]?\s*([a-z0-9][a-z0-9./_-]*)",
     ]
-
     for ligne in t.splitlines():
         ln = norme(ligne)
-
         if "date" in ln:
             continue
-
         for motif in motifs:
             m = re.search(motif, ln, flags=re.IGNORECASE)
-
             if m:
                 candidat = m.group(1).strip(" :.-#")
-
-                if (
-                    len(candidat) >= 2
-                    and candidat.lower() not in ("de", "du", "client", "no", "la")
-                ):
+                if len(candidat) >= 2 and candidat.lower() not in ("de", "du", "client", "no", "la"):
                     return candidat.upper()
-
     return None
 
 
@@ -343,7 +300,6 @@ def extraire_tva(t):
 
 
 def taux_tva_multiples(t):
-    """Liste tous les taux de TVA presents sur la facture (ex: 20 et 5,5)."""
     trouves = []
     for ligne in t.splitlines():
         m = re.search(r"(?:tva|vat|taxe)[^0-9%]{0,25}(\d{1,2}[.,]\d{1,2}|\d{1,2})\s*%", norme(ligne))
@@ -515,10 +471,10 @@ st.markdown("""
   <p>Lit tes factures PDF (même scannées), vérifie les montants, détecte les doublons et suis tes paiements.</p>
 </div>
 <div class="etapes">
-  <span>1️⃣ Dépose tes PDF</span>
+  <span>1️⃣ Dépose tes PDF (jusqu'à 200)</span>
   <span>2️⃣ Vérifie les infos</span>
   <span>3️⃣ Corrige si besoin</span>
-  <span>4️⃣ Ajoute au récapitulatif</span>
+  <span>4️⃣ Ajoute (1 par 1 ou tout en lot)</span>
   <span>5️⃣ Exporte / suis les paiements</span>
 </div>
 """, unsafe_allow_html=True)
@@ -529,7 +485,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 9 · 100 % local · sauvegarde automatique")
+    st.caption("Version 11 · 100 % local · sauvegarde automatique")
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -558,24 +514,13 @@ with st.sidebar:
         if HAS_OCR:
             st.success("✅ OCR actif : les PDF scannés seront lus automatiquement.")
         else:
-            st.markdown("**Étape 1/2 — installe les 2 paquets Python** (clique, ça prend ~20 s) :")
-            if st.button("🛠️ Installer automatiquement (étape 1)", use_container_width=True):
-                import subprocess, sys
-                try:
-                    with st.spinner("Installation de pytesseract + pillow..."):
-                        r = subprocess.run([sys.executable, "-m", "pip", "install", "pytesseract", "pillow"],
-                                           capture_output=True, text=True, timeout=300)
-                    if r.returncode == 0:
-                        st.success("✅ Paquets installés ! Fais l'étape 2, puis relance l'application.")
-                    else:
-                        st.error("Échec. Fais-le à la main : `py -m pip install pytesseract pillow`")
-                except Exception as e:
-                    st.error("Erreur : " + str(e))
+            st.markdown("**Étape 1/2 — installe les 2 paquets Python** :")
+            st.code("py -m pip install pytesseract pillow", language="bash")
             st.markdown("**Étape 2/2 — installe Tesseract** (le moteur OCR) :")
             st.markdown("1. Télécharge : https://github.com/UB-Mannheim/tesseract/wiki")
-            st.markdown("2. Lance l'installeur → installe dans `C:\\Program Files\\Tesseract-OCR`")
-            st.markdown("3. Dans l'installeur, **Additional language data** : coche **French** (et English)")
-            st.markdown("4. **Relance l'application** (Ctrl+C puis la commande de lancement)")
+            st.markdown("2. Installe dans `C:\\Program Files\\Tesseract-OCR`")
+            st.markdown("3. Langues : coche **French** (et English)")
+            st.markdown("4. **Relance l'application**")
 
     with st.expander("❓ C'est quoi HT, TVA, TTC ?"):
         st.markdown("""
@@ -620,6 +565,46 @@ def _val(x):
         return None
 
 
+def traiter_facture(f):
+    """Lit un PDF et retourne un dictionnaire avec tout ce qui a ete extrait + le statut."""
+    texte = lire_texte_pdf(f)
+    methode = "texte du PDF"
+    if not texte or len(texte) < 40:
+        return None  # illisible
+
+    lignes_vis = lignes_par_position(f)
+    if lignes_vis and len(lignes_vis) > 3:
+        texte_extraction = "\n".join(lignes_vis)
+    else:
+        texte_extraction = texte
+    t = norme(texte_extraction)
+
+    ht = extraire_montant(t, [r"total\s*hors\s*taxes", r"total\s*ht", r"montant\s*ht",
+                              r"subtotal", r"sous[- ]total", r"\bht\b"])
+    ttc = extraire_montant(t, [r"net\s*a\s*payer", r"total\s*(?:à|a)\s*payer", r"amount\s*due",
+                               r"balance\s*due", r"total\s*ttc", r"montant\s*ttc",
+                               r"grand\s*total", r"total\s*general", r"\bttc\b", r"\btotal\b"])
+    taux, montant_tva = extraire_tva(t)
+    liste_taux = taux_tva_multiples(t)
+
+    donnees = {
+        "Fournisseur": extraire_fournisseur(lignes_vis or texte.splitlines()),
+        "N° facture": extraire_numero(t),
+        "Date facture": extraire_date_facture(t),
+        "Date échéance": extraire_date_echeance(t),
+        "Montant HT": ht,
+        "Taux TVA (%)": taux,
+        "Montant TVA": montant_tva,
+        "Montant TTC": ttc,
+        "Devise": extraire_devise(t, texte_extraction),
+        "Payée ?": "NON",
+    }
+    manquants = [c for c in CHAMPS if donnees.get(c) in (None, "")]
+    alertes = verifier_coherence(ht, montant_tva, ttc, taux)
+    return {"donnees": donnees, "manquants": manquants, "alertes": alertes,
+            "liste_taux": liste_taux, "methode": methode}
+
+
 # ---------- PAGE : TABLEAU DE BORD ----------
 
 if page == "🏠 Tableau de bord":
@@ -639,82 +624,98 @@ if page == "🏠 Tableau de bord":
 
 fichiers = None
 if page == "📄 Factures PDF":
-    fichiers = st.file_uploader("📂 Dépose tes factures PDF",
+    # Message du dernier ajout en lot (survit au rerun)
+    if st.session_state.get("rapport_lot"):
+        r = st.session_state.pop("rapport_lot")
+        st.success("✅ **" + str(r["ajoutees"]) + " facture(s) ajoutée(s) au récapitulatif.**")
+        if r["passees"]:
+            st.warning("⏭️ **Non ajoutées automatiquement** (à corriger à la main ou doublons) : "
+                       + ", ".join(r["passees"]))
+
+    fichiers = st.file_uploader("📂 Dépose tes factures PDF (jusqu'à 200 à la fois)",
                                 type=["pdf"], accept_multiple_files=True,
-                                help="PDF numériques ET scannés (si OCR installé). Plusieurs fichiers à la fois.")
+                                help="PDF numériques ET scannés (si OCR installé). "
+                                     "Astuce : sélectionne plusieurs fichiers avec Ctrl+clic dans la fenêtre.")
 
-if page == "📄 Factures PDF":
-    if not fichiers:
-        st.info("👆 Dépose une facture PDF — ou ouvre « 🗂️ Factures de test » à gauche pour essayer avec les 3 PDF d'exemple.")
+    if fichiers:
+        if len(fichiers) > 200:
+            st.warning("⚠️ Plus de 200 fichiers déposés : seuls les 200 premiers seront traités.")
 
-    for f in fichiers:
-        texte = lire_texte_pdf(f)
-        methode = "texte du PDF"
+if page == "📄 Factures PDF" and fichiers:
 
-        if not texte or len(texte) < 40:
-            # Pas de texte -> tentative OCR
-            if HAS_OCR:
-                try:
-                    with st.spinner("🔎 OCR en cours sur " + f.name + " (peut prendre 10-30 s)..."):
-                        texte = ocr_pdf(f)
-                    methode = "OCR (scan)"
-                except Exception:
-                    texte = None
-            if not texte or len(texte) < 40:
-                with st.expander("📄 " + f.name + " — illisible", expanded=False):
-                    if HAS_OCR:
-                        st.error("Même l'OCR n'a rien trouvé. La photo est peut-être trop sombre, "
-                                 "trop penchée ou de mauvaise qualité.")
-                    else:
-                        st.error("Ce PDF est un scan (pas de texte). Installe l'OCR : "
-                                 "menu de gauche → « 🔍 OCR (factures scannées) ».")
-                continue
-
-        # Extraction par position (reconstruit les vraies lignes visuelles)
-        lignes_vis = lignes_par_position(f)
-        if lignes_vis and len(lignes_vis) > 3:
-            texte_extraction = "\n".join(lignes_vis)
+    resultats = []
+    for f in fichiers[:200]:
+        with st.spinner("📖 Lecture de " + f.name + "..."):
+            res = traiter_facture(f)
+        if res is None:
+            resultats.append({"f": f, "illisible": True})
         else:
-            texte_extraction = texte
-        t = norme(texte_extraction)
+            resultats.append({"f": f, "illisible": False, **res})
 
-        ht = extraire_montant(t, [r"total\s*hors\s*taxes", r"total\s*ht", r"montant\s*ht",
-                                  r"subtotal", r"sous[- ]total", r"\bht\b"])
-        ttc = extraire_montant(t, [r"net\s*a\s*payer", r"total\s*(?:à|a)\s*payer", r"amount\s*due",
-                                   r"balance\s*due", r"total\s*ttc", r"montant\s*ttc",
-                                   r"grand\s*total", r"total\s*general", r"\bttc\b", r"\btotal\b"])
-        taux, montant_tva = extraire_tva(t)
-        liste_taux = taux_tva_multiples(t)
+    # --- Resume + bouton d'ajout EN LOT ---
+    valides, a_corriger, illisibles = [], [], []
+    for r in resultats:
+        if r["illisible"]:
+            illisibles.append(r)
+        elif not r["manquants"] and not r["alertes"]:
+            valides.append(r)
+        else:
+            a_corriger.append(r)
 
-        donnees = {
-            "Fournisseur": extraire_fournisseur(lignes_vis or texte.splitlines()),
-            "N° facture": extraire_numero(t),
-            "Date facture": extraire_date_facture(t),
-            "Date échéance": extraire_date_echeance(t),
-            "Montant HT": ht,
-            "Taux TVA (%)": taux,
-            "Montant TVA": montant_tva,
-            "Montant TTC": ttc,
-            "Devise": extraire_devise(t, texte_extraction),
-            "Payée ?": "NON",
-        }
+    c1, c2, c3 = st.columns(3)
+    c1.metric("✅ Valides", str(len(valides)))
+    c2.metric("🟠 À corriger", str(len(a_corriger)))
+    c3.metric("🔴 Illisibles", str(len(illisibles)))
 
-        trouves = sum(1 for v in donnees.values() if v not in (None, ""))
-        if trouves >= 7:
-            badge = "🟢 **" + str(trouves) + "/10 champs lus**"
+    if valides:
+        if st.button("➕ Ajouter TOUTES les factures valides (" + str(len(valides)) + ")",
+                     type="primary", use_container_width=True, key="btn_lot"):
+            ajoutees, passees = 0, []
+            recap_actuel = st.session_state["recap"]
+            for r in valides:
+                ligne = r["donnees"]
+                doublon, _ = est_doublon(ligne, recap_actuel)
+                if doublon:
+                    passees.append(r["f"].name + " (doublon)")
+                    continue
+                db_ajouter(ligne)
+                recap_actuel = recap_actuel + [ligne]
+                ajoutees += 1
+            st.session_state["recap"] = db_charger()
+            st.session_state["rapport_lot"] = {"ajoutees": ajoutees, "passees": passees}
+            st.rerun()
+    if a_corriger:
+        st.caption("ℹ️ Les factures « à corriger » doivent être compltées/validées une par une dans leur carte ci-dessous.")
+
+    # --- Affichage detaille, fichier par fichier ---
+    for r in resultats:
+        f = r["f"]
+        if r["illisible"]:
+            with st.expander("📄 " + f.name + " — 🔴 illisible", expanded=False):
+                if HAS_OCR:
+                    st.error("Rien à lire dans ce PDF, même avec l'OCR. "
+                             "Photo trop sombre, trop penchée ou mauvaise qualité ?")
+                else:
+                    st.error("Ce PDF est un scan (pas de texte). Installe l'OCR : menu de gauche → « 🔍 OCR ».")
+            continue
+
+        donnees, manquants, alertes = r["donnees"], r["manquants"], r["alertes"]
+        trouves = 10 - len(manquants)
+        if not manquants and not alertes:
+            badge = "🟢 **" + str(trouves) + "/10 champs · valide**"
         elif trouves >= 4:
-            badge = "🟠 **" + str(trouves) + "/10 champs lus**"
+            badge = "🟠 **" + str(trouves) + "/10 champs · à corriger**"
         else:
-            badge = "🔴 **" + str(trouves) + "/10 champs lus**"
+            badge = "🔴 **" + str(trouves) + "/10 champs · à corriger**"
 
-        with st.expander("📄 " + f.name + "   " + badge + " · lecture : " + methode,
-                         expanded=(len(fichiers) == 1)):
+        with st.expander("📄 " + f.name + "   " + badge + " · lecture : " + r["methode"],
+                         expanded=(len(resultats) == 1)):
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
             df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
                                        use_container_width=True)
 
-            if len(liste_taux) > 1:
-                st.info("🔢 **Plusieurs taux de TVA détectés** : " + ", ".join(liste_taux) +
+            if len(r["liste_taux"]) > 1:
+                st.info("🔢 **Plusieurs taux de TVA détectés** : " + ", ".join(r["liste_taux"]) +
                         " %. Vérifie le champ « Taux TVA » : saisi le taux principal, ajuste à la main si besoin.")
 
             manquants = [c for c, v in zip(CHAMPS, df_corrige.iloc[0]) if str(v).strip() == ""]
@@ -752,6 +753,9 @@ if page == "📄 Factures PDF":
                 db_ajouter(ligne)
                 st.session_state["recap"] = db_charger()
                 st.rerun()
+
+elif page == "📄 Factures PDF":
+    st.info("👆 Dépose une facture PDF — ou ouvre « 🗂️ Factures de test » à gauche pour essayer avec les 3 PDF d'exemple.")
 
 # ---------- PAGE : RECAPITULATIF ----------
 
@@ -891,4 +895,4 @@ if page == "📋 Récapitulatif":
                     st.session_state["recap"] = []
                     st.rerun()
 
-st.caption("Factures IA — version 9 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 11 · " + datetime.date.today().strftime("%d/%m/%Y"))
