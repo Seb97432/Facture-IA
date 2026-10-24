@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v25 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v26 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
@@ -1292,7 +1292,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 25 · IA d'OR 🏆")
+    st.caption("Version 26 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1483,13 +1483,20 @@ with st.sidebar:
         if HAS_OCR:
             st.success("✅ OCR actif : les PDF scannés seront lus automatiquement.")
         else:
-            st.markdown("**Étape 1/2 — installe les 2 paquets Python** :")
-            st.code("py -m pip install pytesseract pillow", language="bash")
-            st.markdown("**Étape 2/2 — installe Tesseract** (le moteur OCR) :")
-            st.markdown("1. Télécharge : https://github.com/UB-Mannheim/tesseract/wiki")
-            st.markdown("2. Installe dans `C:\\Program Files\\Tesseract-OCR`")
-            st.markdown("3. Langues : coche **French** (et English)")
-            st.markdown("4. **Relance l'application**")
+            st.markdown("""**Sur ton PC (local)** :
+            1. `py -m pip install pytesseract pillow`
+            2. Installe Tesseract : https://github.com/UB-Mannheim/tesseract/wiki
+            (dans `C:\\Program Files\\Tesseract-OCR`, langues **French** + English)
+            3. **Relance l'application**
+
+            **Sur Streamlit Cloud** : ajoute à la racine du dépôt un fichier
+            **`packages.txt`** contenant :""")
+            st.code("""tesseract-ocr
+tesseract-ocr-fra""", language="text")
+            st.markdown("""et ajoute `pytesseract` et `pillow` dans **`requirements.txt`**.
+            Après redéploiement, la mention « ✅ OCR actif » doit apparaître ici.
+            (Si elle n'apparaît pas, les PDF scannés ne seront pas lus : les PDF
+            texte fonctionnent toujours.)""")
 
     with st.expander("❓ C'est quoi HT, TVA, TTC ?"):
         st.markdown("""
@@ -2257,19 +2264,45 @@ if page == "💰 Paiements":
                         reste_apres = round(reste_p - montant_p, 2)
                         if reste_apres <= 0.005:
                             st.success("Paiement enregistré : la facture est soldée 💰")
-                            st.warning("⚠️ Elle n'est **pas encore** marquée « Payée » : "
-                                       "c'est TOI qui confirmes ci-dessous.")
-                            if st.button("✔️ CONFIRMER : cette facture est entièrement payée",
-                                         key="btn_confirm_payee", type="primary"):
-                                maj2 = dict(maj)
-                                maj2["Payée ?"] = "OUI"
-                                db_remplacer_numero(cible, maj2)
-                                st.session_state["recap"] = db_charger()
-                                st.success("Facture confirmée payée ✔")
-                                st.rerun()
+                            # le bouton de confirmation DOIT survivre au rechargement
+                            # de la page : on stocke la facture a confirmer.
+                            st.session_state["solde_a_confirmer"] = {
+                                "Fournisseur": cible.get("Fournisseur", ""),
+                                "N° facture": cible.get("N° facture", "")}
+                            st.rerun()
                         else:
                             st.success("Paiement enregistré ✔ — reste à payer : " +
                                        str(reste_apres) + " (statut : Partiellement payée)")
+
+        # --- Confirmation humaine apres un paiement soldant (v26 : le
+        # bouton survit au rechargement, il est donc reellement cliquable) ---
+        if st.session_state.get("solde_a_confirmer"):
+            info_c = st.session_state["solde_a_confirmer"]
+            st.warning("⚠️ La facture **" + str(info_c.get("Fournisseur", "?")) + "** n° " +
+                       str(info_c.get("N° facture", "?")) + " est soldée mais **pas encore** "
+                       "marquée « Payée » : c'est TOI qui confirmes.")
+            cc1, cc2 = st.columns(2)
+            if cc1.button("✔️ CONFIRMER : cette facture est entièrement payée",
+                          key="btn_confirm_payee", type="primary", use_container_width=True):
+                cible_c = [r for r in st.session_state["recap"]
+                           if str(r.get("N° facture", "")).upper() ==
+                           str(info_c.get("N° facture", "")).upper()
+                           and str(r.get("Fournisseur", "")).lower() ==
+                           str(info_c.get("Fournisseur", "")).lower()]
+                if cible_c:
+                    maj2 = dict(cible_c[0])
+                    maj2["Payée ?"] = "OUI"
+                    db_remplacer_numero(cible_c[0], maj2)
+                    st.session_state["recap"] = db_charger()
+                    st.session_state.pop("solde_a_confirmer", None)
+                    st.success("Facture confirmée payée ✔")
+                    st.rerun()
+                else:
+                    st.error("Facture introuvable : elle a peut-être été modifiée.")
+            if cc2.button("❌ Pas maintenant", key="btn_confirm_plus_tard",
+                          use_container_width=True):
+                st.session_state.pop("solde_a_confirmer", None)
+                st.rerun()
 
         # --- Historique des paiements ---
         st.markdown("### 📜 Historique des paiements")
@@ -2656,4 +2689,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 25 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 26 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
