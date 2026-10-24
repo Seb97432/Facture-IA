@@ -11,7 +11,10 @@ v28 : LIMITE DE 500 FACTURES PAR COMPTE (garde cote client + policy SQL
 cote serveur), ASSISTANT AVEC MEMOIRE CONVERSATIONNELLE (fil affiche,
 contexte des 10 derniers echanges, table 'conversations' protegee par
 RLS : reprise, suppression, isolation stricte entre comptes), sidebar
-allegee (aides deplacees vers la page 'Aide' + compteur de capacite)."""
+allegee (aides deplacees vers la page 'Aide' + compteur de capacite).
+v28.1 : CORRECTIF st.chat_input (le parametre 'default' n'existe pas sur
+toutes les versions de Streamlit -> TypeError) : une question-exemple
+cliquee est traitee directement. Textes de la barre laterale peaufines."""
 
 import re
 import io
@@ -1313,7 +1316,8 @@ if "recap" not in st.session_state:
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 28 · IA d'OR 🏆")
+    st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
+    st.caption("Version 28.1 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1452,7 +1456,9 @@ with st.sidebar:
                         st.session_state.pop("inscription_attente", None)
                         st.rerun()
     else:
-        st.caption("💾 Sauvegarde locale (SQLite) — mode sans compte")
+        st.caption("💾 Mode sans compte : sauvegarde sur cette machine uniquement. "
+                   "Crée un compte pour garder tes factures en ligne et les "
+                   "retrouver sur tous tes appareils.")
     if st.session_state.get("erreur_cloud"):
         st.error("⚠️ Problème de connexion à la sauvegarde en ligne : les données ont été "
                  "gardées en local. Détail : " + str(st.session_state["erreur_cloud"]))
@@ -1472,7 +1478,8 @@ with st.sidebar:
                  "d'anciennes factures pour continuer.")
     else:
         st.caption("🗂️ **" + str(nb_factures) + " / " + str(LIMITE_FACTURES) +
-                   "** facture(s) · " + str(reste_f) + " place(s) restante(s)")
+                   "** facture(s) enregistrée(s) · " + str(reste_f) +
+                   " emplacement(s) libre(s) au maximum")
     page = st.radio(
         "Choisir une page",
         ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
@@ -1485,8 +1492,10 @@ with st.sidebar:
     st.markdown('<p class="section-titre">📚 Factures de test & OCR</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("🗂️ Factures de test (clique ici)"):
-        st.markdown("Télécharge ces 3 PDF **différents**, puis dépose-les dans l'application :")
+    with st.expander("📄 Factures de test (essaie l'application)"):
+        st.markdown("Trois factures d'exemple, **différentes et pièges** : télécharge-les "
+                    "sur ton PC, puis dépose-les dans la page « 📄 Factures PDF ». "
+                    "Rien n'est inventé — vérifie toujours les champs surlignés.")
         st.download_button("📄 1 : française classique",
                            facture_test_1(), file_name="facture_test_1.pdf", mime="application/pdf",
                            use_container_width=True)
@@ -2752,9 +2761,12 @@ if page == "🤖 Assistant":
                 st.session_state["prochaine_question_ia"] = sugg
                 st.rerun()
 
-    question_a = st.chat_input(
-        "Ta question (ex : combien dois-je à ENTREPRISE DUPONT ?)",
-        default=st.session_state.pop("prochaine_question_ia", "") or None)
+    # v28.1 : plus de parametre 'default' (inexistant sur certaines versions
+    # de Streamlit -> TypeError). Une question-exemple cliquee est traitee
+    # directement comme une question envoyee.
+    question_a = st.chat_input("Ta question (ex : combien dois-je à ENTREPRISE DUPONT ?)")
+    if not question_a:
+        question_a = st.session_state.pop("prochaine_question_ia", "") or None
 
     if question_a and question_a.strip():
         st.session_state["ia_messages"].append(
@@ -3007,4 +3019,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 28 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 28.1 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
