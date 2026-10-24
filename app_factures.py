@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v28 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
@@ -15,7 +15,7 @@ allegee (aides deplacees vers la page 'Aide' + compteur de capacite).
 v28.1 : CORRECTIF st.chat_input (le parametre 'default' n'existe pas sur
 toutes les versions de Streamlit -> TypeError) : une question-exemple
 cliquee est traitee directement. Textes de la barre laterale peaufines.
-v28.2 : TEXTES SIDEBAR AU NIVEAU 'IA D'OR' : titres d'explicateurs
+v28.2 : TEXTES SIDEBAR PROFESSIONNELS : titres d'explicateurs
 clairs (exemples de test, OCR, legal, confidentialite, comptes),
 structure avec sections-titres, renvois internes coherents. Aucune
 logique modifiee.
@@ -24,7 +24,12 @@ accent bleu discret, plus de degrade hero, KPI epures) + SIDEBAR EN
 2 GROUPES ('Pilotage' et 'Aide & exports', via session_state
 'page_courante' + on_change — AUCUNE page supprimee) + ASSISTANT
 GENERALISTE (prompt systeme reecrit : repond a toute question, n'utilise
-les factures QUE si pertinent, honnetete renforcee)."""
+les factures QUE si pertinent, honnetete renforcee).
+v29.1 : MARQUE CORRIGEE — plus aucune mention d'une autre app : le moteur
+s'appelle desormais 'moteur_analyse' (etait moteur_ia_dor), captions et
+footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
+ne garantit pas que les montants lus sont exacts (caption avant
+enregistrement)."""
 
 import re
 import io
@@ -519,7 +524,7 @@ def taux_tva_multiples(t):
     return trouves
 
 # ============================================================
-# 3bis. MOTEUR IA D'OR - analyse profonde avec validation croisee
+# 3bis. MOTEUR D'ANALYSE FACTURE IA -  profonde avec validation croisee
 # ============================================================
 # Principe : au lieu de croire UNE etiquette, le moteur collecte TOUS les
 # montants candidats (HT, TTC, TVA, tables de TVA) puis teste tous les trios.
@@ -589,7 +594,7 @@ def _somme_table_tva(lignes):
     return montants, bases
 
 
-def moteur_ia_dor(texte_extraction):
+def moteur_analyse(texte_extraction):
     """Analyse profonde : cherche le TRIO coherent HT + TVA = TTC le mieux
     note. Retourne ht, ttc, tva, taux, confiance, notes."""
     t = norme(texte_extraction)
@@ -1328,7 +1333,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 29 · IA d'OR 🏆")
+    st.caption("Version 29")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1528,7 +1533,7 @@ with st.sidebar:
         st.markdown("Trois factures **réelles d'exemple**, dont une anglaise (USD) "
                     "et une aux pièges classiques (TVA 8,5 %). Télécharge-les sur "
                     "ton PC, dépose-les dans « 📄 Factures PDF », et regarde "
-                    "l'IA d'OR extraire, vérifier et alerter : **HT + TVA = TTC**, "
+                    "le moteur d'analyse extraire, vérifier et alerter : **HT + TVA = TTC**, "
                     "champs manquants surlignés, zéro invention.")
         st.download_button("📄 1 : française classique",
                            facture_test_1(), file_name="facture_test_1.pdf", mime="application/pdf",
@@ -2172,7 +2177,7 @@ def repondre_question(question, lignes):
 
 
 def traiter_facture(f):
-    """Lit un PDF et retourne tout ce qui a ete extrait + le statut + l'analyse IA d'OR."""
+    """Lit un PDF et retourne tout ce qui a ete extrait + le statut + l'analyse du moteur."""
     texte, methode = lire_texte_pdf(f)
     if not texte or len(texte) < 40:
         return None  # illisible
@@ -2184,8 +2189,8 @@ def traiter_facture(f):
         texte_extraction = texte
     t = norme(texte_extraction)
 
-    # === MOTEUR IA D'OR ===
-    analyse = moteur_ia_dor(texte_extraction)
+    # === MOTEUR D'ANALYSE ===
+    analyse = moteur_analyse(texte_extraction)
 
     donnees = {
         "Fournisseur": extraire_fournisseur(lignes_vis or texte.splitlines()),
@@ -2302,7 +2307,7 @@ if page == "📄 Factures PDF" and fichiers:
 
     resultats = []
     for f in fichiers[:200]:
-        with st.spinner("🧠 IA d'OR analyse " + f.name + "..."):
+        with st.spinner("🧠 Analyse IA de " + f.name + "..."):
             res = traiter_facture(f)
         if res is None:
             resultats.append({"f": f, "illisible": True})
@@ -2374,10 +2379,10 @@ if page == "📄 Factures PDF" and fichiers:
 
         with st.expander("📄 " + f.name + "   " + badge + " · lecture : " + r["methode"],
                          expanded=(len(resultats) == 1)):
-            # Notes d'analyse de l'IA d'OR
+            # Notes d'analyse du moteur
             if r["notes"]:
                 for note in r["notes"]:
-                    st.info("🧠 **IA d'OR** : " + note)
+                    st.info("🧠 **Analyse IA** : " + note)
 
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
             df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
@@ -2417,7 +2422,13 @@ if page == "📄 Factures PDF" and fichiers:
                     st.success("Facture mise à jour.")
                     st.rerun()
 
+            # v29 : rappel de fiabilite OCR — coherence mathematique ne
+            # garantit pas l'exactitude de la lecture.
+            st.caption("⚠️ Vérifie les champs avant d'enregistrer : un trio cohérent "
+                       "(HT + TVA = TTC) ne prouve pas que les montants lus sont les bons "
+                       "— un scan flou peut produire des chiffres faux mais cohérents.")
             if st.button("➕ Ajouter au récapitulatif", key="btn_" + f.name, type="primary",
+                         disabled=bool(manquants or alertes) or limite_atteinte()):
                          disabled=bool(manquants or alertes) or limite_atteinte()):
                 ligne = {c: df_corrige.iloc[0][c] for c in CHAMPS}
                 if not db_ajouter(ligne):
@@ -2862,7 +2873,7 @@ if page == "🤖 Assistant":
 if page == "❓ Aide":
     st.markdown("### ❓ Aide & explications")
 
-    with st.expander("🏆 C'est quoi l'IA d'OR ?"):
+    with st.expander("🧠 C'est quoi le moteur d'analyse IA ?"):
         st.markdown("""
         Un moteur d'analyse **profonde** :
 
@@ -3083,4 +3094,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 29 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 29 · " + datetime.date.today().strftime("%d/%m/%Y"))
