@@ -2429,7 +2429,6 @@ if page == "📄 Factures PDF" and fichiers:
                        "— un scan flou peut produire des chiffres faux mais cohérents.")
             if st.button("➕ Ajouter au récapitulatif", key="btn_" + f.name, type="primary",
                          disabled=bool(manquants or alertes) or limite_atteinte()):
-                         disabled=bool(manquants or alertes) or limite_atteinte()):
                 ligne = {c: df_corrige.iloc[0][c] for c in CHAMPS}
                 if not db_ajouter(ligne):
                     st.error("🚫 **Limite de " + str(LIMITE_FACTURES) + " factures atteinte.** "
