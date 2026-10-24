@@ -14,7 +14,11 @@ RLS : reprise, suppression, isolation stricte entre comptes), sidebar
 allegee (aides deplacees vers la page 'Aide' + compteur de capacite).
 v28.1 : CORRECTIF st.chat_input (le parametre 'default' n'existe pas sur
 toutes les versions de Streamlit -> TypeError) : une question-exemple
-cliquee est traitee directement. Textes de la barre laterale peaufines."""
+cliquee est traitee directement. Textes de la barre laterale peaufines.
+v28.2 : TEXTES SIDEBAR AU NIVEAU 'IA D'OR' : titres d'explicateurs
+clairs (exemples de test, OCR, legal, confidentialite, comptes),
+structure avec sections-titres, renvois internes coherents. Aucune
+logique modifiee."""
 
 import re
 import io
@@ -1317,7 +1321,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 28.1 · IA d'OR 🏆")
+    st.caption("Version 28.2 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1489,13 +1493,15 @@ with st.sidebar:
     )
     st.divider()
 
-    st.markdown('<p class="section-titre">📚 Factures de test & OCR</p>',
+    st.markdown('<p class="section-titre">🧪 Essais & lecture des scans</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("📄 Factures de test (essaie l'application)"):
-        st.markdown("Trois factures d'exemple, **différentes et pièges** : télécharge-les "
-                    "sur ton PC, puis dépose-les dans la page « 📄 Factures PDF ». "
-                    "Rien n'est inventé — vérifie toujours les champs surlignés.")
+    with st.expander("🧪 Factures d'exemple — teste en 30 secondes"):
+        st.markdown("Trois factures **réelles d'exemple**, dont une anglaise (USD) "
+                    "et une aux pièges classiques (TVA 8,5 %). Télécharge-les sur "
+                    "ton PC, dépose-les dans « 📄 Factures PDF », et regarde "
+                    "l'IA d'OR extraire, vérifier et alerter : **HT + TVA = TTC**, "
+                    "champs manquants surlignés, zéro invention.")
         st.download_button("📄 1 : française classique",
                            facture_test_1(), file_name="facture_test_1.pdf", mime="application/pdf",
                            use_container_width=True)
@@ -1507,29 +1513,36 @@ with st.sidebar:
                            use_container_width=True)
     st.divider()
 
-    with st.expander("🔍 OCR (factures scannées)"):
+    with st.expander("🔍 Lecture des factures scannées (OCR)"):
         if HAS_OCR:
-            st.success("✅ OCR actif : les PDF scannés seront lus automatiquement.")
+            st.success("✅ **OCR actif** — les PDF scannés et photos de factures "
+                       "sont lus automatiquement, avec redressement des pages "
+                       "penchées et correction des chiffres confondus (O ↔ 0).")
         else:
-            st.markdown("""**Sur ton PC (local)** :
+            st.markdown("""**L'OCR active la lecture des factures scannées**
+            (PDF image ou photo, sans texte lisible). Sans lui, seuls les
+            PDF texte fonctionnent.
+
+            **🖥️ Sur ton PC (local)** — 3 étapes :
             1. `py -m pip install pytesseract pillow`
             2. Installe Tesseract : https://github.com/UB-Mannheim/tesseract/wiki
             (dans `C:\\Program Files\\Tesseract-OCR`, langues **French** + English)
             3. **Relance l'application**
 
-            **Sur Streamlit Cloud** : ajoute à la racine du dépôt un fichier
+            **☁️ Sur Streamlit Cloud** — ajoute à la racine du dépôt un fichier
             **`packages.txt`** contenant :""")
             st.code("""tesseract-ocr
 tesseract-ocr-fra""", language="text")
-            st.markdown("""et ajoute `pytesseract` et `pillow` dans **`requirements.txt`**.
-            Après redéploiement, la mention « ✅ OCR actif » doit apparaître ici.
-            (Si elle n'apparaît pas, les PDF scannés ne seront pas lus : les PDF
-            texte fonctionnent toujours.)""")
+            st.markdown("""puis ajoute `pytesseract` et `pillow` dans
+            **`requirements.txt`**. Après redéploiement, la mention
+            « ✅ OCR actif » doit apparaître ici. Tant qu'elle est absente,
+            les PDF scannés ne sont pas lus — les PDF texte, eux,
+            fonctionnent toujours.""")
 
-    st.markdown('<p class="section-titre">⚖️ Légal, données & configuration</p>',
+    st.markdown('<p class="section-titre">⚖️ Transparence : légal, données & comptes</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("⚖️ Mentions légales, confidentialité & pilote"):
+    with st.expander("⚖️ Mentions légales & confidentialité (lisez-moi)"):
         st.markdown("""**⚠️ Ce qu'est Facture IA (et ce qu'elle n'est PAS)**
 
         Facture IA est un **outil d'aide à la saisie et au suivi des factures
@@ -1580,23 +1593,26 @@ tesseract-ocr-fra""", language="text")
         avec de vraies copies mais garde tes factures importantes
         sauvegardées ailleurs (export CSV).""")
 
-    with st.expander("🛡️ Où vont mes données ?"):
+    with st.expander("🛡️ Confidentialité & sécurité des données"):
         if _cloud_actif():
-            st.markdown("""**Mode sauvegarde permanente (activé)** :
+            st.markdown("""**Sauvegarde en ligne : ACTIVE ✅** — voici exactement
+            ce qui part en ligne, et ce qui reste chez toi :
 
-            - Tes factures validées (et leurs paiements) sont enregistrées dans
-            une base **Supabase** en ligne. Elles survivent aux redémarrages,
-            aux redéploiements et sont accessibles depuis plusieurs appareils.
-            - **Chaque facture est liée à l'identifiant unique (UUID) de TON
-            compte**. Les règles RLS de Supabase, vérifiées **côté serveur**,
-            empêchent tout autre compte de lire, modifier ou supprimer tes
-            factures — et t'empêchent d'accéder à celles des autres.
-            - Une **copie locale** (fichier `factures.db`) reste sur la machine,
-            marquée à ton UUID, comme sauvegarde de secours.
-            - Les **PDF originaux** ne sont PAS envoyés en ligne : seul le
-            résumé (fournisseur, n°, dates, montants, paiements) part dans
-            la base. Ne mets jamais de secret ou mot de passe dans le code
-            ou sur GitHub.""")
+            - **Ce qui est enregistré en ligne** : uniquement le **résumé** de tes
+            factures validées (fournisseur, n°, dates, montants, paiements) dans
+            une base **Supabase** (Europe). Tes données survivent aux
+            redémarrages, aux redéploiements et te suivent sur tous tes appareils.
+            - **Ce qui ne quitte JAMAIS ta machine** : les **PDF originaux**.
+            Ils sont analysés localement puis supprimés du serveur d'hébergement.
+            - **Isolation par compte** : chaque facture est liée à l'identifiant
+            unique (UUID) de TON compte. Les règles RLS de Supabase, vérifiées
+            **côté serveur**, empêchent tout autre compte de lire, modifier ou
+            supprimer tes factures — et t'empêchent d'accéder à celles des autres.
+            - **Double sécurité** : une **copie locale** (`factures.db`) reste
+            sur la machine, marquée à ton UUID, comme sauvegarde de secours.
+            - **Bonne pratique** : ne mets jamais de secret ni de mot de passe
+            dans le code ou sur GitHub. Les clés vivent dans les Secrets
+            Streamlit, jamais dans l'application.""")
             if _session():
                 if st.button("📤 Envoyer mes factures locales vers la sauvegarde en ligne",
                              key="btn_migrer_sb", use_container_width=True):
@@ -1617,22 +1633,29 @@ tesseract-ocr-fra""", language="text")
             else:
                 st.caption("Connecte-toi pour voir le bouton d'envoi de tes factures.")
         else:
-            st.markdown("""Tout est traité **sur la machine où l'application tourne** :
-                        les factures validées sont sauvegardées dans le fichier `factures.db`
-                        du dossier de l'application, aucun PDF ni montant n'est envoyé ailleurs.
+            st.markdown("""**Mode 100 % local** — tout est traité **sur la machine
+                        où l'application tourne** : les factures validées sont
+                        sauvegardées dans le fichier `factures.db` du dossier de
+                        l'application. Aucun PDF, aucun montant, aucune donnée
+                        n'est envoyé ailleurs.
 
-                        ⚠️ **Important — déploiement sur Streamlit Cloud** : l'espace disque de
-                        Streamlit Cloud est **effacé à chaque redémarrage ou redéploiement**.
-                        Ta base `factures.db` ne survivra donc PAS là-bas. Pour garder tes
-                        données durablement : active la **sauvegarde permanente Supabase**
-                        (guide dans l'expander ☁️ ci-dessous), ou lance l'application en
-                        **local**, ou **exporte régulièrement** tes factures (CSV / Excel
+                        ⚠️ **À savoir si l'app est déployée sur Streamlit Cloud** :
+                        l'espace disque de Streamlit Cloud est **effacé à chaque
+                        redémarrage ou redéploiement** — ta base `factures.db` ne
+                        survivra donc PAS là-bas. Trois solutions, au choix :
+
+                        - Active la **sauvegarde permanente Supabase** (guide
+                        complet dans l'expander ☁️ ci-dessous) ;
+                        - Lance l'application **en local** sur ta machine ;
+                        - **Exporte régulièrement** tes factures (CSV / Excel
                         dans le Récapitulatif).""")
 
-    with st.expander("☁️ Comptes + sauvegarde permanente : mode d'emploi"):
+    with st.expander("☁️ Activer les comptes & la sauvegarde en ligne — guide pas à pas"):
         st.markdown("""
-        Pour que tes factures **survivent sur Streamlit Cloud**, avec de **vrais
-        comptes séparés** (email + mot de passe), suis ces étapes une par une :
+        Objectif : que tes factures **survivent sur Streamlit Cloud**, avec de
+        **vrais comptes séparés** (email + mot de passe + code de confirmation
+        à 6 chiffres). Pas besoin d'être développeur : chaque étape est
+        indépendante, aucune donnée n'est perdue en cours de route.
 
         **1.** Crée un compte sur https://supabase.com puis un nouveau projet
         (nom libre, ex. `factures-ia`, mot de passe fort, région Europe).
@@ -2372,7 +2395,8 @@ if page == "📄 Factures PDF" and fichiers:
                 st.code(r.get("texte", "")[:4000], language="text")
 
 elif page == "📄 Factures PDF":
-    st.info("👆 Dépose une facture PDF — ou ouvre « 🗂️ Factures de test » à gauche pour essayer avec les 3 PDF d'exemple.")
+    st.info("👆 Dépose une facture PDF — ou ouvre « 🧪 Factures d'exemple » dans la barre "
+            "latérale pour essayer l'application avec les 3 PDF fournis, en 30 secondes.")
 
 # ---------- PAGE : PAIEMENTS (v17) ----------
 
@@ -3019,4 +3043,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 28.1 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 28.2 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
