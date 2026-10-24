@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v26 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v27 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
@@ -1186,8 +1186,7 @@ st.markdown("""
     section[data-testid="stSidebar"] * {color: #c9d1dc !important;}
     .hero {
         background: linear-gradient(115deg, #232057 0%, #3b34a8 55%, #4a44c4 100%);
-        color: #fff; padding: 1.7rem 2.2rem; border-radius: 18px; margin-bottom: 1rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        color: #fff; padding: 1.2rem 1.6rem; border-radius: 14px; margin-bottom: 1rem;
     }
     .hero h1 {color: #fff; margin: 0; font-size: 1.85rem; font-weight: 800; letter-spacing: -.5px;}
     .hero p {color: #cfd4ff; margin: .45rem 0 0 0; font-size: 1rem;}
@@ -1231,9 +1230,8 @@ st.markdown("""
 
 /* ---- v21 : cartes KPI premium ---- */
 .carte-kpi {
-    background: #161a22; border: 1px solid #262c37; border-radius: 14px;
-    padding: .95rem 1rem; text-align: center; height: 100%;
-    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    background: #161a22; border: 1px solid #262c37; border-radius: 12px;
+    padding: .8rem .9rem; text-align: center; height: 100%;
 }
 .carte-kpi .kpi-lib {color: #93a0b4; font-size: .82rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
@@ -1274,15 +1272,8 @@ div[data-testid="stExpander"] {margin-bottom: .45rem;}
 
 st.markdown("""
 <div class="hero">
-  <h1>🧾 Factures IA · IA d'OR 🏆</h1>
-  <p>Lit tes factures PDF, teste tous les montants possibles et ne garde que ceux qui respectent la comptabilité.</p>
-</div>
-<div class="etapes">
-  <span>1️⃣ Dépose tes PDF (jusqu'à 200)</span>
-  <span>2️⃣ L'IA analyse en profondeur</span>
-  <span>3️⃣ Corrige si besoin</span>
-  <span>4️⃣ Ajoute (1 par 1 ou tout en lot)</span>
-  <span>5️⃣ Exporte / suis les paiements</span>
+  <h1>🧾 Factures IA</h1>
+  <p>Dépose tes factures PDF — l'IA les lit, les vérifie et suit tes paiements.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1292,7 +1283,7 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 26 · IA d'OR 🏆")
+    st.caption("Version 27 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1669,7 +1660,26 @@ supabase_key = "TA-CLE-ANON-PUBLIC"
         **Sécurité** : la clé anon reste dans les Secrets Streamlit, jamais
         dans le code ni sur GitHub. Grâce à Supabase Auth + RLS, chaque
         compte ne voit **que ses propres factures** — même si quelqu'un
-        modifie le code de l'application, le serveur Supabase refuse.""")
+        modifie le code de l'application, le serveur Supabase refuse.
+
+        ---
+
+        **🧠 Activer l'assistant IA complet (facultatif)** : sur
+        https://platform.mistral.ai → crée un compte → **API Keys** →
+        génère une clé. Puis ajoute-la dans les Secrets Streamlit, sous
+        `[factures_ia]` :
+
+        ```
+        mistral_api_key = "TA-CLE-MISTRAL"
+        ```
+
+        L'assistant 🤖 répond alors comme une vraie IA (questions sur tes
+        factures ET questions générales), avec repli automatique sur le
+        moteur local en cas de panne. ⚠️ Transparence : pour répondre sur
+        tes factures, leurs données sont envoyées à l'API Mistral (c'est
+        affiché sur la page Assistant). L'API est payante à l'usage mais
+        très peu coûteuse à ton volume ; sans clé, l'assistant local
+        fonctionne toujours, sans aucun envoi.""")
 
 # ============================================================
 # 8. TRAITEMENT
@@ -1812,7 +1822,53 @@ MODES_PAIEMENT = ["🏦 Virement", "💳 Carte bancaire", "✍️ Chèque",
                   "💶 Espèces", "🔁 Prélèvement", "📱 Autre"]
 
 
-# ---------- ASSISTANT IA (v18) ----------
+# ---------- ASSISTANT IA : VRAIE IA (Mistral) + repli local (v27) ----------
+
+def _cle_mistral():
+    """Cle API Mistral, facultative, rangee dans les Secrets Streamlit.
+    Si absente : l'assistant reste le moteur local (aucune donnee envoyee)."""
+    try:
+        return str(st.secrets["factures_ia"].get("mistral_api_key", "")).strip()
+    except Exception:
+        return ""
+
+
+def repondre_question_ia(question, lignes):
+    """Assistant IA complet (API Mistral). Retourne (reponse, None) ou
+    (None, raison_echec) — dans ce cas on retombe sur le moteur local.
+    REGLES D'OR : les questions sur les factures sont repondues UNIQUEMENT
+    avec les donnees fourni ; l'IA peut aussi repondre aux questions
+    generales. Les factures sont envoyees a l'API Mistral pour fabriquer
+    la reponse (c'est affiche clairement a l'utilisateur)."""
+    cle = _cle_mistral()
+    if not cle:
+        return None, "pas_de_cle"
+    if not HAS_REQUESTS:
+        return None, "pas_de_reseau"
+    resume = json.dumps(lignes, ensure_ascii=False)[:12000]
+    systeme = ("Tu es l'assistant intégré de l'application Facture IA. "
+               "Règles strictes : (1) Pour toute question sur les factures de "
+               "l'utilisateur, utilise UNIQUEMENT les données JSON fournies ; "
+               "si une information est absente ou incertaine, dis-le clairement "
+               "et ne l'invente JAMAIS. (2) Tu peux aussi répondre aux questions "
+               "générales (hors comptabilité), en français, en restant utile et "
+               "concis. (3) Réponds en français, court et clair, avec des "
+               "montants exacts issus des données.")
+    try:
+        r = requests.post("https://api.mistral.ai/v1/chat/completions",
+                          headers={"Authorization": "Bearer " + cle,
+                                   "Content-Type": "application/json"},
+                          json={"model": "mistral-small-latest",
+                                "messages": [
+                                    {"role": "system", "content": systeme +
+                                     "\nFACTURES DE L'UTILISATEUR (JSON) :\n" + resume},
+                                    {"role": "user", "content": question}]},
+                          timeout=30)
+        if r.status_code != 200:
+            return None, "api_" + str(r.status_code)
+        return r.json()["choices"][0]["message"]["content"], None
+    except Exception as e:
+        return None, str(e)[:80]
 
 def repondre_question(question, lignes):
     """Assistant 100 % local : répond UNIQUEMENT avec les factures
@@ -2309,7 +2365,10 @@ if page == "💰 Paiements":
         avec_hist = [l for l in lignes_p if l.get("Historique paiements")]
         if not avec_hist:
             st.caption("Aucun paiement enregistré pour l'instant.")
-        for l in avec_hist:
+        # v26.1 : les cles des boutons utilisent l'INDEX de la ligne, jamais
+        # le numero de facture : deux factures avec le meme numero (ou sans
+        # numero) ne font plus planter l'application (StreamlitDuplicateElementKey).
+        for idx_h, l in enumerate(avec_hist):
             intitule = str(l.get("Fournisseur", "?")) + " · n° " + \
                        str(l.get("N° facture", "?")) + " · " + _statut_paiement(l)
             with st.expander("📖 " + intitule):
@@ -2320,17 +2379,16 @@ if page == "💰 Paiements":
                 if soldée:
                     st.info("Cette facture est soldée mais pas encore confirmée payée.")
                     if st.button("✔️ CONFIRMER : entièrement payée",
-                                 key="confirm_" + str(l.get("N° facture")) + "_" +
-                                 str(l.get("Fournisseur"))):
+                                 key="confirm_" + str(idx_h)):
                         maj = dict(l)
                         maj["Payée ?"] = "OUI"
                         db_remplacer_numero(l, maj)
                         st.session_state["recap"] = db_charger()
                         st.rerun()
                 # v18 : annuler le dernier paiement (erreur de saisie, chèque refusé...)
-                cle_annul = "annuler_" + str(l.get("N° facture")) + "_" + str(l.get("Fournisseur"))
                 if l.get("Historique paiements"):
-                    if st.button("↩️ Annuler le dernier paiement", key=cle_annul):
+                    if st.button("↩️ Annuler le dernier paiement",
+                                 key="annuler_" + str(idx_h)):
                         payes_a = list(l.get("Historique paiements") or [])
                         dernier_a = payes_a.pop()
                         maj_a = dict(l)
@@ -2503,13 +2561,20 @@ if page == "📤 Pour le comptable":
                    "rien n'est envoyé sur Internet. C'est toi qui transmets le fichier "
                    "à ton comptable, par le canal que tu choisis.")
 
-# ---------- PAGE : ASSISTANT IA (v18) ----------
+# ---------- PAGE : ASSISTANT IA ----------
 
 if page == "🤖 Assistant":
     st.markdown("### 🤖 Assistant Factures IA")
-    st.caption("Pose-moi une question sur **TES** factures enregistrées. "
-               "Je réponds uniquement avec tes données : jamais d'invention, "
-               "sans jamais rien inventer. Aucune question n'est envoyée sur Internet.")
+    if _cle_mistral():
+        st.caption("🧠 Assistant IA complet (Mistral). Pose tes questions sur tes "
+                   "factures — ou n'importe quel sujet. ⚠️ Pour répondre sur tes "
+                   "factures, tes données enregistrées sont envoyées à l'API Mistral.")
+        mode_a = "IA"
+    else:
+        st.caption("Assistant local : réponds uniquement avec tes factures enregistrées, "
+                   "jamais d'invention. 💡 Pour un assistant complet (comme ChatGPT), "
+                   "ajoute une clé Mistral dans les Secrets — voir l'expander ☁️ de la sidebar.")
+        mode_a = "local"
     suggestions_a = ["Combien me reste-t-il à payer ?", "Quelles factures sont en retard ?",
                      "Quelles sont les prochaines échéances ?", "Combien de TVA au total ?",
                      "Par quels moyens ai-je payé ?", "Total de mes factures ?"]
@@ -2521,10 +2586,18 @@ if page == "🤖 Assistant":
     question_a = st.text_input("Ta question", key="question_ia",
                                placeholder="Ex : combien dois-je à ENTREPRISE DUPONT ?")
     if question_a.strip():
-        reponse_a = repondre_question(question_a, st.session_state["recap"])
+        reponse_a = None
+        if mode_a == "IA":
+            with st.spinner("🧠 L'IA réfléchit..."):
+                reponse_a, err_ia = repondre_question_ia(question_a, st.session_state["recap"])
+            if reponse_a is None:
+                st.caption("⚠️ IA indisponible (" + str(err_ia) +
+                           ") — réponse calculée par le moteur local à la place.")
+        if reponse_a is None:
+            reponse_a = repondre_question(question_a, st.session_state["recap"])
         st.markdown(reponse_a)
-        st.caption("🧠 Réponse calculée uniquement à partir de tes factures enregistrées. "
-                   "En cas de doute, vérifie toujours dans « 📋 Récapitulatif ».")
+        st.caption("🧠 Sur tes factures : réponse basée uniquement sur tes données "
+                   "enregistrées — en cas de doute, vérifie dans « 📋 Récapitulatif ».")
     else:
         st.info("👆 Choisis une question exemple ou écris la tienne.")
 
@@ -2689,4 +2762,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 26 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 27 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
