@@ -18,7 +18,13 @@ cliquee est traitee directement. Textes de la barre laterale peaufines.
 v28.2 : TEXTES SIDEBAR AU NIVEAU 'IA D'OR' : titres d'explicateurs
 clairs (exemples de test, OCR, legal, confidentialite, comptes),
 structure avec sections-titres, renvois internes coherents. Aucune
-logique modifiee."""
+logique modifiee.
+v29 : REFACTO VISUELLE SOBRE (theme sombre minimaliste : fond #0e0f12,
+accent bleu discret, plus de degrade hero, KPI epures) + SIDEBAR EN
+2 GROUPES ('Pilotage' et 'Aide & exports', via session_state
+'page_courante' + on_change — AUCUNE page supprimee) + ASSISTANT
+GENERALISTE (prompt systeme reecrit : repond a toute question, n'utilise
+les factures QUE si pertinent, honnetete renforcee)."""
 
 import re
 import io
@@ -1209,82 +1215,83 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: #101319;}
+    .stApp {background: #0e0f12;}
     .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #d7dde6 !important;}
-    section[data-testid="stSidebar"] {background: #161a22; border-right: 1px solid #262c37;}
-    section[data-testid="stSidebar"] * {color: #c9d1dc !important;}
+    [data-testid="stCaptionContainer"] {color: #c9cdd6 !important;}
+    section[data-testid="stSidebar"] {background: #15161b; border-right: 1px solid #23252c;}
+    section[data-testid="stSidebar"] * {color: #b8bcc8 !important;}
+    /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: linear-gradient(115deg, #232057 0%, #3b34a8 55%, #4a44c4 100%);
-        color: #fff; padding: 1.2rem 1.6rem; border-radius: 14px; margin-bottom: 1rem;
+        background: #15161b; color: #e6e8ec;
+        border: 1px solid #23252c; border-radius: 12px;
+        padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #fff; margin: 0; font-size: 1.85rem; font-weight: 800; letter-spacing: -.5px;}
-    .hero p {color: #cfd4ff; margin: .45rem 0 0 0; font-size: 1rem;}
+    .hero h1 {color: #e6e8ec; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;}
+    .hero p {color: #8b90a0; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #1c2130; color: #a5b4fc; border: 1px solid #2c3350;
-        border-radius: 20px; padding: .35rem .95rem; margin: .25rem .28rem 0 0;
-        font-weight: 600; font-size: .9rem;
+        display: inline-block; background: #15161b; color: #9fb0f5; border: 1px solid #2a2d38;
+        border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
+        font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 14px; border: 1px solid #262c37; background: #161a22;
-        box-shadow: 0 2px 10px rgba(0,0,0,.25); overflow: hidden;
+        border-radius: 12px; border: 1px solid #23252c; background: #15161b;
+        overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #e3e8f0 !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #c9d1dc !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d7dae2 !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b8bcc8 !important;}
     div[data-testid="stMetric"] {
-        background: #161a22; border: 1px solid #262c37; border-radius: 14px; padding: .9rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,.25);
+        background: #15161b; border: 1px solid #23252c; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #93a0b4 !important;}
-    div[data-testid="stMetricValue"] {color: #e8e4d8 !important;}
+    div[data-testid="stMetricLabel"] p {color: #8b90a0 !important;}
+    div[data-testid="stMetricValue"] {color: #e6e8ec !important;}
     .stButton > button {
-        background: #1c2130; color: #e3e8f0; border: 1px solid #2c3350; border-radius: 10px;
+        background: #1b1d24; color: #d7dae2; border: 1px solid #2a2d38; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #4a44c4; color: #fff;}
+    .stButton > button:hover {border-color: #5b7cfa; color: #fff;}
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; border: none;
+        background: #5b7cfa; color: #fff; border: none;
     }
-    .stButton > button[kind="primary"]:hover {background: linear-gradient(135deg, #5d54f0, #7473f5);}
+    .stButton > button[kind="primary"]:hover {background: #6d8bfb;}
     .stDownloadButton > button {
-        background: #1c2130; color: #a5b4fc; border: 1px solid #2c3350; border-radius: 10px;
+        background: #1b1d24; color: #9fb0f5; border: 1px solid #2a2d38; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #4a44c4; color: #fff;}
+    .stDownloadButton > button:hover {border-color: #5b7cfa; color: #fff;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #3a4166; border-radius: 14px; padding: .7rem; background: #141824;
+        border: 1.5px dashed #33363f; border-radius: 12px; padding: .7rem; background: #121318;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #161a22;}
-    .stTabs [data-baseweb="tab"] {color: #93a0b4; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #6366f1;}
-    .stTabs [data-baseweb="tab"]:hover {color: #d7dde6;}
-    hr {border-color: #262c37;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #15161b;}
+    .stTabs [data-baseweb="tab"] {color: #8b90a0; font-weight: 600;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #5b7cfa;}
+    .stTabs [data-baseweb="tab"]:hover {color: #c9cdd6;}
+    hr {border-color: #23252c;}
 
-/* ---- v21 : cartes KPI premium ---- */
+/* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #161a22; border: 1px solid #262c37; border-radius: 12px;
+    background: #15161b; border: 1px solid #23252c; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #93a0b4; font-size: .82rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #8b90a0; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #e8e4d8; font-size: 1.45rem; font-weight: 800;}
-.carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #4ade80;}
-.carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #fbbf24;}
-.carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #f87171;}
-.carte-kpi.bleu {border-color: #2c3350;}   .carte-kpi.bleu .kpi-val {color: #a5b4fc;}
+.carte-kpi .kpi-val {color: #e6e8ec; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #57b98a;}
+.carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #c9a45c;}
+.carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #d97777;}
+.carte-kpi.bleu {border-color: #2a2d38;}   .carte-kpi.bleu .kpi-val {color: #9fb0f5;}
 
-/* ---- v25 : sections de la sidebar + finitions ---- */
+/* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #a5b4fc; font-weight: 800; font-size: .74rem;
+    color: #8b90a0; font-weight: 600; font-size: .72rem;
     letter-spacing: 1.2px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #262c37; padding-bottom: .3rem;
+    border-bottom: 1px solid #23252c; padding-bottom: .3rem;
 }
 div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
     padding: .28rem .5rem; border-radius: 9px; transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1c2130;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1b1d24;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
 
 
@@ -1296,7 +1303,7 @@ div[data-testid="stExpander"] {margin-bottom: .45rem;}
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #101319;}
+    section[data-testid="stSidebar"] {background: #0e0f12;}
 }
 
 </style>
@@ -1321,7 +1328,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 28.2 · IA d'OR 🏆")
+    st.caption("Version 29 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1484,12 +1491,33 @@ with st.sidebar:
         st.caption("🗂️ **" + str(nb_factures) + " / " + str(LIMITE_FACTURES) +
                    "** facture(s) enregistrée(s) · " + str(reste_f) +
                    " emplacement(s) libre(s) au maximum")
-    page = st.radio(
+    st.markdown('<p class="section-titre">Pilotage</p>', unsafe_allow_html=True)
+
+    def _nav_a():
+        st.session_state["page_courante"] = st.session_state["navigation_page"]
+
+    def _nav_b():
+        st.session_state["page_courante"] = st.session_state["navigation_page_b"]
+
+    if "page_courante" not in st.session_state:
+        st.session_state["page_courante"] = "🏠 Tableau de bord"
+    page = st.session_state["page_courante"]
+    st.radio(
         "Choisir une page",
         ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
-         "📤 Pour le comptable", "🤖 Assistant", "📋 Récapitulatif", "❓ Aide"],
+         "📋 Récapitulatif"],
         key="navigation_page",
         label_visibility="collapsed",
+        on_change=_nav_a,
+    )
+    st.markdown('<p class="section-titre">Aide &amp; exports</p>',
+                unsafe_allow_html=True)
+    st.radio(
+        "Choisir une page (suite)",
+        ["🤖 Assistant", "📤 Pour le comptable", "❓ Aide"],
+        key="navigation_page_b",
+        label_visibility="collapsed",
+        on_change=_nav_b,
     )
     st.divider()
 
@@ -1982,16 +2010,28 @@ def repondre_question_ia(question, lignes, historique=None):
     if not HAS_REQUESTS:
         return None, "pas_de_reseau"
     resume = json.dumps(lignes, ensure_ascii=False)[:12000]
-    systeme = ("Tu es l'assistant intégré de l'application Facture IA. "
-               "Règles strictes : (1) Pour toute question sur les factures de "
-               "l'utilisateur, utilise UNIQUEMENT les données JSON fournies ; "
-               "si une information est absente ou incertaine, dis-le clairement "
-               "et ne l'invente JAMAIS. (2) Tu peux aussi répondre aux questions "
-               "générales (hors comptabilité), en français, en restant utile et "
-               "concis. (3) Réponds en français, court et clair, avec des "
-               "montants exacts issus des données. (4) Tu vois l'historique de "
-               "la conversation : sers-t'en pour les questions de suivi, mais "
-               "ne réinvente jamais une donnée absente des factures fournies.")
+    systeme = ("Tu es l'assistant IA intégré de l'application Facture IA — "
+               "un assistant conversationnel GENERALISTE, pas un simple "
+               "module de comptabilité. Règles : "
+               "(1) COMPORTEMENT GENERAL : réponds naturellement à toute "
+               "question (explications, rédaction de textes, résumés, "
+               "idées, résolution de problèmes, réflexion sur un projet). "
+               "Ne ramène JAMAIS artificiellement une question hors "
+               "comptabilité vers les factures. Sers-toi de l'historique "
+               "pour les questions de suivi et les références implicites. "
+               "(2) COMPETENCE SPECIALE : pour toute question liée aux "
+               "factures de l'utilisateur (montants, fournisseurs, "
+               "échéances, totaux, paiements, relances), utilise "
+               "UNIQUEMENT les données JSON fournies ; si une information "
+               "est absente ou incertaine, dis-le clairement et ne "
+               "l'invente JAMAIS. Propose des montants exacts issus des "
+               "données quand c'est pertinent. "
+               "(3) HONNETETE : si tu ne connais pas la réponse ou si "
+               "l'information manque, dis-le franchement. "
+               "(4) FORME : français, réponses bien structurées (titres "
+               "courts ou listes quand utile), calibrées en longueur sur "
+               "la demande — simple si la question est simple, "
+               "approfondie si on te le demande.")
     messages = [{"role": "system", "content": systeme +
                  "\nFACTURES DE L'UTILISATEUR (JSON) :\n" + resume}]
     for m in (historique or [])[-MAX_MESSAGES_CONTEXTE:]:
@@ -3043,4 +3083,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 28.2 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 29 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
