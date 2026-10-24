@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
-"""FACTURES IA v27 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
+"""FACTURES IA v28 - IA D'OR : trios HT/TVA/TTC, OCR fusion multi-lectures
 AVEC REDRESSEMENT DES SCANS PENSES, filtre anti-SIRET, suivi des paiements
 PRO, pack comptable par mois, export parametrable, ASSISTANT IA local et
 COMPTES REELS via Supabase Auth (email + mot de passe) : chaque facture
 est liee a l'UUID du compte, regles RLS cote serveur, separation totale
 des donnees entre utilisateurs. Sauvegarde permanente + MIGRATION
 SECURISEE depuis SQLite (l'ancien fichier factures.db est GARDE).
-Regle d'or : jamais inventer, jamais 'payee' sans confirmation humaine."""
+Regle d'or : jamais inventer, jamais 'payee' sans confirmation humaine.
+v28 : LIMITE DE 500 FACTURES PAR COMPTE (garde cote client + policy SQL
+cote serveur), ASSISTANT AVEC MEMOIRE CONVERSATIONNELLE (fil affiche,
+contexte des 10 derniers echanges, table 'conversations' protegee par
+RLS : reprise, suppression, isolation stricte entre comptes), sidebar
+allegee (aides deplacees vers la page 'Aide' + compteur de capacite)."""
 
 import re
 import io
@@ -949,6 +954,21 @@ def _cle(ligne):
             str(ligne.get("Fournisseur", "")).lower().strip())
 
 
+# v28 : LIMITE DE 500 FACTURES PAR UTILISATEUR.
+# Une "facture" = UNE ligne validee du recapitulatif (fournisseur + numero).
+# Le nombre de pages ou de fichiers PDF ne compte PAS : un PDF de 3 pages
+# = 1 facture. Garde cote client ici + policy SQL cote serveur (voir le
+# mode d'emploi dans la sidebar) : meme une interface modifiee est bloquee.
+LIMITE_FACTURES = 500
+
+
+def limite_atteinte(lignes=None):
+    """True si l'utilisateur a deja ses 500 factures."""
+    if lignes is None:
+        lignes = st.session_state.get("recap") or []
+    return len(lignes) >= LIMITE_FACTURES
+
+
 # ---------- Couche SQLite (locale, chaque ligne marquee par son UUID) ----------
 
 def db_connexion():
@@ -1096,6 +1116,10 @@ def db_charger():
 
 
 def db_ajouter(ligne):
+    """Ajoute une facture. Retourne True si ajoute, False si la limite de
+    500 factures est atteinte (dans ce cas RIEN n'est enregistre)."""
+    if limite_atteinte():
+        return False
     uid = _uid_courant()
     try:
         sqlite_ajouter(ligne, uid)   # copie locale de secours, marquee a ton UUID
@@ -1107,6 +1131,7 @@ def db_ajouter(ligne):
         except Exception as e:
             if "session expiree" not in str(e):
                 st.session_state["erreur_cloud"] = str(e)[:200]
+    return True
 
 
 def db_remplacer_numero(ancien, nouveau):
@@ -1281,9 +1306,14 @@ st.markdown("""
 # 7. SIDEBAR
 # ============================================================
 
+# v28 : charge les factures AVANT la sidebar pour que le compteur de
+# capacite soit juste des le premier affichage.
+if "recap" not in st.session_state:
+    st.session_state["recap"] = db_charger()
+
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
-    st.caption("Version 27 · IA d'OR 🏆")
+    st.caption("Version 28 · IA d'OR 🏆")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1432,16 +1462,27 @@ with st.sidebar:
     st.divider()
 
     st.markdown("### 🧭 Navigation")
+    # v28 : compteur de capacite, toujours visible
+    nb_factures = len(st.session_state.get("recap") or [])
+    reste_f = LIMITE_FACTURES - nb_factures
+    st.progress(min(nb_factures / LIMITE_FACTURES, 1.0))
+    if reste_f <= 0:
+        st.error("🚫 **Capacité pleine : " + str(LIMITE_FACTURES) + "/" +
+                 str(LIMITE_FACTURES) + " factures.** Exporte puis supprime " +
+                 "d'anciennes factures pour continuer.")
+    else:
+        st.caption("🗂️ **" + str(nb_factures) + " / " + str(LIMITE_FACTURES) +
+                   "** facture(s) · " + str(reste_f) + " place(s) restante(s)")
     page = st.radio(
         "Choisir une page",
         ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
-         "📤 Pour le comptable", "🤖 Assistant", "📋 Récapitulatif"],
+         "📤 Pour le comptable", "🤖 Assistant", "📋 Récapitulatif", "❓ Aide"],
         key="navigation_page",
         label_visibility="collapsed",
     )
     st.divider()
 
-    st.markdown('<p class="section-titre">📚 Aides & démonstration</p>',
+    st.markdown('<p class="section-titre">📚 Factures de test & OCR</p>',
                 unsafe_allow_html=True)
 
     with st.expander("🗂️ Factures de test (clique ici)"):
@@ -1456,19 +1497,6 @@ with st.sidebar:
                            facture_test_3(), file_name="facture_test_3.pdf", mime="application/pdf",
                            use_container_width=True)
     st.divider()
-
-    with st.expander("🏆 C'est quoi l'IA d'OR ?"):
-        st.markdown("""
-        Un moteur d'analyse **profonde** :
-
-        - 🧮 Il collecte **tous** les montants candidats de la facture (HT, TTC, TVA, tables de TVA).
-        - ✔ Il teste **toutes les combinaisons** et ne garde que celles où **HT + TVA = TTC**.
-        - 🔢 Il lit les **tables de TVA** (« Taux | Base | Montant ») et fait la somme.
-        - 💡 Il peut **déduire la TVA** (TTC − HT) quand elle est invisible, si le taux confirme.
-        - 📊 Il affiche un **score de confiance** et ses notes d'analyse.
-
-        **Règle d'or inchangée : jamais inventer.** Si rien n'est sûr, le champ reste à vérifier.
-        """)
 
     with st.expander("🔍 OCR (factures scannées)"):
         if HAS_OCR:
@@ -1489,14 +1517,6 @@ tesseract-ocr-fra""", language="text")
             (Si elle n'apparaît pas, les PDF scannés ne seront pas lus : les PDF
             texte fonctionnent toujours.)""")
 
-    with st.expander("❓ C'est quoi HT, TVA, TTC ?"):
-        st.markdown("""
-        - **HT** = *Hors Taxes* : le prix sans la taxe.
-        - **TVA** : le % facturé en plus et reversé à l'État.
-        - **TTC** = *Toutes Taxes Comprises* : le total à payer.
-
-        🧮 **Règle d'or : HT + TVA = TTC.**
-        """)
     st.markdown('<p class="section-titre">⚖️ Légal, données & configuration</p>',
                 unsafe_allow_html=True)
 
@@ -1632,6 +1652,36 @@ drop policy if exists "acces proprietaire" on factures;
 create policy "chacun les siennes" on factures
   for all
   using (auth.uid()::text = utilisateur)
+  with check (auth.uid()::text = utilisateur);
+
+-- v28 : LIMITE DE 500 FACTURES PAR COMPTE, appliquee COTE SERVEUR.
+-- Une insertion au-dela de 500 est refusee par Supabase lui-meme :
+-- modifier l'application ne suffit pas a contourner la limite.
+drop policy if exists "limite_500_factures" on factures;
+
+create policy "limite_500_factures" on factures
+  for insert to authenticated
+  with check (
+    (select count(*) from factures f
+     where f.utilisateur = auth.uid()::text) < 500
+  );
+
+-- v28 : MEMOIRE DE L'ASSISTANT (table 'conversations', protegee par RLS :
+-- chaque compte ne voit et ne modifie que SA conversation).
+create table if not exists conversations (
+  id bigint generated by default as identity primary key,
+  utilisateur text not null unique,
+  messages jsonb not null default '[]'::jsonb,
+  maj timestamptz not null default now()
+);
+
+alter table conversations enable row level security;
+
+drop policy if exists "conversation privee" on conversations;
+
+create policy "conversation privee" on conversations
+  for all
+  using (auth.uid()::text = utilisateur)
   with check (auth.uid()::text = utilisateur);""", language="sql")
         st.markdown("""
         ⚠️ **Si tu avais déjà des factures en ligne** (mode avant comptes,
@@ -1731,9 +1781,6 @@ if _session() and st.session_state.get("proposer_recup"):
             st.session_state["proposer_recup"] = 0
             st.rerun()
 
-if "recap" not in st.session_state:
-    st.session_state["recap"] = db_charger()
-
 CHAMPS = ["Fournisseur", "N° facture", "Date facture", "Date échéance",
           "Montant HT", "Taux TVA (%)", "Montant TVA", "Montant TTC", "Devise", "Payée ?"]
 EXPLIQUES = {
@@ -1823,6 +1870,60 @@ MODES_PAIEMENT = ["🏦 Virement", "💳 Carte bancaire", "✍️ Chèque",
 
 
 # ---------- ASSISTANT IA : VRAIE IA (Mistral) + repli local (v27) ----------
+# v28 : MEMOIRE CONVERSATIONNELLE. Le fil est garde en session ET (facultatif)
+# dans la table 'conversations' de Supabase, protegee par RLS : chaque compte
+# ne voit QUE sa conversation. L'historique complet n'est JAMAIS envoyé à
+# Mistral : seuls les 10 derniers échanges partent (fenêtre glissante), et
+# rien ne part du tout si l'assistant local est utilisé.
+
+MAX_MESSAGES_STOCKES = 30     # conservés en ligne (anti-base infinie)
+MAX_MESSAGES_CONTEXTE = 10    # envoyés à l'IA comme contexte
+
+
+def cloud_conversation_charger():
+    """La conversation sauvegardee de l'utilisateur connecte (ou [] si aucune,
+    pas de session, ou table absente). RLS : uniquement la sienne."""
+    if not (_cloud_actif() and _session()):
+        return []
+    try:
+        params = {"utilisateur": "eq." + _uid_courant(), "select": "messages"}
+        lignes = _sb_requete("GET", "/rest/v1/conversations", params=params) or []
+        msgs = (lignes[0] or {}).get("messages") or []
+        return msgs if isinstance(msgs, list) else []
+    except Exception:
+        return []   # table absente ou reseau : silencieux, session seulement
+
+
+def cloud_conversation_sauver(messages):
+    """Enregistre le fil (1 ligne par utilisateur, mise a jour si existe).
+    Silencieux en cas d'echec : la conversation reste en session."""
+    if not (_cloud_actif() and _session()):
+        return
+    try:
+        params = {"utilisateur": "eq." + _uid_courant()}
+        existe = _sb_requete("GET", "/rest/v1/conversations",
+                             params={"utilisateur": "eq." + _uid_courant(),
+                                     "select": "id"}) or []
+        if existe:
+            _sb_requete("PATCH", "/rest/v1/conversations",
+                        donnees={"messages": messages}, params=params)
+        else:
+            _sb_requete("POST", "/rest/v1/conversations",
+                        donnees={"utilisateur": _uid_courant(), "messages": messages})
+    except Exception:
+        pass
+
+
+def cloud_conversation_supprimer():
+    """Efface la conversation en ligne de l'utilisateur (uniquement la sienne)."""
+    if not (_cloud_actif() and _session()):
+        return
+    try:
+        _sb_requete("DELETE", "/rest/v1/conversations",
+                    params={"utilisateur": "eq." + _uid_courant()})
+    except Exception:
+        pass
+
 
 def _cle_mistral():
     """Cle API Mistral, facultative, rangee dans les Secrets Streamlit.
@@ -1833,13 +1934,16 @@ def _cle_mistral():
         return ""
 
 
-def repondre_question_ia(question, lignes):
+def repondre_question_ia(question, lignes, historique=None):
     """Assistant IA complet (API Mistral). Retourne (reponse, None) ou
     (None, raison_echec) — dans ce cas on retombe sur le moteur local.
     REGLES D'OR : les questions sur les factures sont repondues UNIQUEMENT
     avec les donnees fourni ; l'IA peut aussi repondre aux questions
     generales. Les factures sont envoyees a l'API Mistral pour fabriquer
-    la reponse (c'est affiche clairement a l'utilisateur)."""
+    la reponse (c'est affiche clairement a l'utilisateur).
+    v28 : MEMOIRE — les MAX_MESSAGES_CONTEXTE derniers échanges sont
+    envoyés avec la question, pour que l'IA comprenne les questions de
+    suivi (« et la deuxième ? », « pourquoi ce montant ? »...)."""
     cle = _cle_mistral()
     if not cle:
         return None, "pas_de_cle"
@@ -1853,16 +1957,21 @@ def repondre_question_ia(question, lignes):
                "et ne l'invente JAMAIS. (2) Tu peux aussi répondre aux questions "
                "générales (hors comptabilité), en français, en restant utile et "
                "concis. (3) Réponds en français, court et clair, avec des "
-               "montants exacts issus des données.")
+               "montants exacts issus des données. (4) Tu vois l'historique de "
+               "la conversation : sers-t'en pour les questions de suivi, mais "
+               "ne réinvente jamais une donnée absente des factures fournies.")
+    messages = [{"role": "system", "content": systeme +
+                 "\nFACTURES DE L'UTILISATEUR (JSON) :\n" + resume}]
+    for m in (historique or [])[-MAX_MESSAGES_CONTEXTE:]:
+        if m.get("role") in ("user", "assistant") and str(m.get("content", "")).strip():
+            messages.append({"role": m["role"], "content": str(m["content"])})
+    messages.append({"role": "user", "content": question})
     try:
         r = requests.post("https://api.mistral.ai/v1/chat/completions",
                           headers={"Authorization": "Bearer " + cle,
                                    "Content-Type": "application/json"},
                           json={"model": "mistral-small-latest",
-                                "messages": [
-                                    {"role": "system", "content": systeme +
-                                     "\nFACTURES DE L'UTILISATEUR (JSON) :\n" + resume},
-                                    {"role": "user", "content": question}]},
+                                "messages": messages},
                           timeout=30)
         if r.status_code != 200:
             return None, "api_" + str(r.status_code)
@@ -2099,6 +2208,11 @@ if page == "📄 Factures PDF":
     if st.session_state.get("rapport_lot"):
         r = st.session_state.pop("rapport_lot")
         st.success("✅ **" + str(r["ajoutees"]) + " facture(s) ajoutée(s) au récapitulatif.**")
+        if r.get("bloquees"):
+            st.error("🚫 **" + str(r["bloquees"]) + " facture(s) non ajoutée(s) : limite de " +
+                     str(LIMITE_FACTURES) + " factures atteinte.** Supprime d'anciennes " +
+                     "factures (ou exporte-les) pour libérer de la place — rien n'est " +
+                     "effacé automatiquement.")
         if r["passees"]:
             st.warning("⏭️ **Non ajoutées automatiquement** (à corriger à la main ou doublons) : "
                        + ", ".join(r["passees"]))
@@ -2141,7 +2255,7 @@ if page == "📄 Factures PDF" and fichiers:
     if valides:
         if st.button("➕ Ajouter TOUTES les factures valides (" + str(len(valides)) + ")",
                      type="primary", use_container_width=True, key="btn_lot"):
-            ajoutees, passees = 0, []
+            ajoutees, passees, bloquees = 0, [], 0
             recap_actuel = st.session_state["recap"]
             for r in valides:
                 ligne = r["donnees"]
@@ -2149,12 +2263,16 @@ if page == "📄 Factures PDF" and fichiers:
                 if doublon:
                     passees.append(r["f"].name + " (doublon)")
                     continue
+                if limite_atteinte(recap_actuel):   # v28 : 500 max
+                    bloquees += 1
+                    continue
                 db_ajouter(ligne)
                 sauver_pdf(ligne, r["f"])   # v17 : garde le PDF pour le comptable
                 recap_actuel = recap_actuel + [ligne]
                 ajoutees += 1
             st.session_state["recap"] = db_charger()
-            st.session_state["rapport_lot"] = {"ajoutees": ajoutees, "passees": passees}
+            st.session_state["rapport_lot"] = {"ajoutees": ajoutees, "passees": passees,
+                                              "bloquees": bloquees}
             st.rerun()
     if a_corriger:
         st.caption("ℹ️ Les factures « à corriger » doivent être complétées/validées une par une dans leur carte ci-dessous.")
@@ -2228,9 +2346,12 @@ if page == "📄 Factures PDF" and fichiers:
                     st.rerun()
 
             if st.button("➕ Ajouter au récapitulatif", key="btn_" + f.name, type="primary",
-                         disabled=bool(manquants or alertes)):
+                         disabled=bool(manquants or alertes) or limite_atteinte()):
                 ligne = {c: df_corrige.iloc[0][c] for c in CHAMPS}
-                db_ajouter(ligne)
+                if not db_ajouter(ligne):
+                    st.error("🚫 **Limite de " + str(LIMITE_FACTURES) + " factures atteinte.** "
+                             "Exporte puis supprime d'anciennes factures pour libérer de la place.")
+                    st.stop()
                 sauver_pdf(ligne, f)   # v17 : garde le PDF pour le comptable
                 st.session_state["recap"] = db_charger()
                 st.rerun()
@@ -2565,41 +2686,165 @@ if page == "📤 Pour le comptable":
 
 if page == "🤖 Assistant":
     st.markdown("### 🤖 Assistant Factures IA")
+
+    # v28 : le fil de conversation est recharge depuis la sauvegarde en ligne
+    # (table protegee par RLS) a la premiere ouverture de la page.
+    if "ia_messages" not in st.session_state:
+        st.session_state["ia_messages"] = cloud_conversation_charger()
+
     if _cle_mistral():
-        st.caption("🧠 Assistant IA complet (Mistral). Pose tes questions sur tes "
-                   "factures — ou n'importe quel sujet. ⚠️ Pour répondre sur tes "
-                   "factures, tes données enregistrées sont envoyées à l'API Mistral.")
+        st.caption("🧠 Assistant IA complet (Mistral), **avec mémoire de la "
+                   "conversation** : tu peux poser des questions de suivi. "
+                   "⚠️ Pour répondre, tes factures enregistrées et tes "
+                   "10 derniers échanges sont envoyés à l'API Mistral.")
         mode_a = "IA"
     else:
         st.caption("Assistant local : réponds uniquement avec tes factures enregistrées, "
-                   "jamais d'invention. 💡 Pour un assistant complet (comme ChatGPT), "
-                   "ajoute une clé Mistral dans les Secrets — voir l'expander ☁️ de la sidebar.")
+                   "jamais d'invention, **rien n'est envoyé sur Internet**. 💡 Pour un "
+                   "assistant complet avec mémoire, ajoute une clé Mistral dans les "
+                   "Secrets — voir la page « ❓ Aide ».")
         mode_a = "local"
-    suggestions_a = ["Combien me reste-t-il à payer ?", "Quelles factures sont en retard ?",
-                     "Quelles sont les prochaines échéances ?", "Combien de TVA au total ?",
-                     "Par quels moyens ai-je payé ?", "Total de mes factures ?"]
-    sug_cols = st.columns(3)
-    for i_a, sugg in enumerate(suggestions_a):
-        if sug_cols[i_a % 3].button(sugg, key="sugg_" + str(i_a), use_container_width=True):
-            st.session_state["question_ia"] = sugg
-            st.rerun()
-    question_a = st.text_input("Ta question", key="question_ia",
-                               placeholder="Ex : combien dois-je à ENTREPRISE DUPONT ?")
-    if question_a.strip():
+
+    # --- Contrôles de l'historique (l'utilisateur décide) ---
+    c_ia1, c_ia2 = st.columns(2)
+    if c_ia1.button("🧹 Nouvelle conversation", key="btn_nouvelle_conv",
+                    use_container_width=True, disabled=not st.session_state["ia_messages"]):
+        st.session_state["ia_messages"] = []
+        cloud_conversation_supprimer()
+        st.rerun()
+    if c_ia2.button("🗑️ Effacer l'historique en ligne", key="btn_suppr_conv",
+                    use_container_width=True,
+                    disabled=not st.session_state["ia_messages"],
+                    help="Supprime la conversation enregistrée dans Supabase "
+                         "(uniquement la tienne)."):
+        st.session_state["ia_messages"] = []
+        cloud_conversation_supprimer()
+        st.success("✅ Historique effacé.")
+        st.rerun()
+    if st.session_state["ia_messages"]:
+        st.caption("💾 " + str(len(st.session_state["ia_messages"])) +
+                   " message(s) dans cette conversation — elle est conservée, "
+                   "tu peux la reprendre plus tard. Seuls les " +
+                   str(MAX_MESSAGES_CONTEXTE) + " derniers échanges servent de "
+                   "contexte à l'IA.")
+
+    # --- Affichage du fil ---
+    for m in st.session_state["ia_messages"]:
+        if m.get("role") == "user":
+            with st.chat_message("user"):
+                st.markdown(m["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.markdown(m["content"])
+
+    # --- Suggestions (uniquement si conversation neuuve) ---
+    if not st.session_state["ia_messages"]:
+        suggestions_a = ["Combien me reste-t-il à payer ?",
+                         "Quelles factures sont en retard ?",
+                         "Quelles sont les prochaines échéances ?",
+                         "Combien de TVA au total ?",
+                         "Par quels moyens ai-je payé ?",
+                         "Total de mes factures ?"]
+        sug_cols = st.columns(3)
+        for i_a, sugg in enumerate(suggestions_a):
+            if sug_cols[i_a % 3].button(sugg, key="sugg_" + str(i_a),
+                                        use_container_width=True):
+                st.session_state["prochaine_question_ia"] = sugg
+                st.rerun()
+
+    question_a = st.chat_input(
+        "Ta question (ex : combien dois-je à ENTREPRISE DUPONT ?)",
+        default=st.session_state.pop("prochaine_question_ia", "") or None)
+
+    if question_a and question_a.strip():
+        st.session_state["ia_messages"].append(
+            {"role": "user", "content": question_a.strip()})
         reponse_a = None
         if mode_a == "IA":
             with st.spinner("🧠 L'IA réfléchit..."):
-                reponse_a, err_ia = repondre_question_ia(question_a, st.session_state["recap"])
+                reponse_a, err_ia = repondre_question_ia(
+                    question_a, st.session_state["recap"],
+                    st.session_state["ia_messages"])
             if reponse_a is None:
                 st.caption("⚠️ IA indisponible (" + str(err_ia) +
                            ") — réponse calculée par le moteur local à la place.")
         if reponse_a is None:
             reponse_a = repondre_question(question_a, st.session_state["recap"])
-        st.markdown(reponse_a)
-        st.caption("🧠 Sur tes factures : réponse basée uniquement sur tes données "
-                   "enregistrées — en cas de doute, vérifie dans « 📋 Récapitulatif ».")
-    else:
-        st.info("👆 Choisis une question exemple ou écris la tienne.")
+            reponse_a += "\n\n*💡 Réponse du moteur local : pour un vrai dialogue "
+            reponse_a += "avec mémoire, active l'assistant IA complet (page « ❓ Aide »).*"
+        st.session_state["ia_messages"].append(
+            {"role": "assistant", "content": reponse_a})
+        # plafonne l'historique conservé (les vieux échanges sont éliminés)
+        st.session_state["ia_messages"] = st.session_state["ia_messages"][-MAX_MESSAGES_STOCKES:]
+        cloud_conversation_sauver(st.session_state["ia_messages"])
+        st.rerun()   # réaffiche le fil complet avec la nouvelle réponse
+    elif not st.session_state["ia_messages"]:
+        st.info("👆 Pose ta première question (ou choisis un exemple plus haut).")
+
+# ---------- PAGE : AIDE ----------
+
+if page == "❓ Aide":
+    st.markdown("### ❓ Aide & explications")
+
+    with st.expander("🏆 C'est quoi l'IA d'OR ?"):
+        st.markdown("""
+        Un moteur d'analyse **profonde** :
+
+        - 🧮 Il collecte **tous** les montants candidats de la facture (HT, TTC, TVA, tables de TVA).
+        - ✔ Il teste **toutes les combinaisons** et ne garde que celles où **HT + TVA = TTC**.
+        - 🔢 Il lit les **tables de TVA** (« Taux | Base | Montant ») et fait la somme.
+        - 💡 Il peut **déduire la TVA** (TTC − HT) quand elle est invisible, si le taux confirme.
+        - 📊 Il affiche un **score de confiance** et ses notes d'analyse.
+
+        **Règle d'or inchangée : jamais inventer.** Si rien n'est sûr, le champ reste à vérifier.""")
+
+    with st.expander("❓ C'est quoi HT, TVA, TTC ?"):
+        st.markdown("""
+        - **HT** = *Hors Taxes* : le prix sans la taxe.
+        - **TVA** : le % facturé en plus et reversé à l'État.
+        - **TTC** = *Toutes Taxes Comprises* : le total à payer.
+
+        🧮 **Règle d'or : HT + TVA = TTC.**""")
+
+    with st.expander("🤖 L'assistant et sa mémoire : comment ça marche ?"):
+        st.markdown("""
+        **Deux modes, ton choix** :
+
+        - **Sans clé API** : l'assistant **local** répond uniquement en calculant
+        sur tes factures enregistrées. **Rien ne quitte ta machine.**
+        - **Avec clé Mistral** (Secrets Streamlit) : un vrai assistant conversationnel.
+        Pour te répondre, il reçoit **le résumé de tes factures + tes 10 derniers
+        échanges**. C'est envoyé à l'API Mistral (payante à l'usage, très peu
+        chère à ton volume) — et c'est affiché sur la page Assistant.
+
+        **La mémoire** :
+
+        - Le fil de la conversation est **conservé** (table `conversations`
+        protégée par RLS : chaque compte ne voit que sa conversation).
+        - Tu peux **reprendre** une discussion plus tard, l'**effacer** (bouton
+        « 🗑️ Effacer l'historique en ligne »), ou repartir de zéro
+        (« 🧹 Nouvelle conversation »).
+        - Seuls les **10 derniers échanges** servent de contexte à l'IA ; au-delà
+        de 30 messages, les plus anciens sont éliminés. Aucune donnée de facture
+        n'est conservée dans la conversation plus longtemps que nécessaire.
+        - **Aucun PDF** n'est jamais envoyé à l'IA : uniquement les résumés
+        (fournisseur, n°, dates, montants, paiements).""")
+
+    with st.expander("🗂️ La limite de 500 factures"):
+        st.markdown("""
+        - Chaque compte peut enregistrer jusqu'à **500 factures**. Une facture =
+        **une ligne validée du récapitulatif** (un PDF de 3 pages compte pour
+        1 facture ; un fichier renommé 10 fois compte aussi pour 1).
+        - Le compteur dans le menu de gauche affiche toujours ta capacité
+        restante. À la limite atteinte : un message clair s'affiche et l'ajout
+        est refusé.
+        - La limite est **aussi appliquée côté serveur** (règle Supabase) : la
+        modifier dans l'application ne suffit pas à la contourner.
+        - **Aucune facture n'est jamais effacée automatiquement** pour libérer
+        de la place : c'est toi qui exportes puis supprimes.""")
+
+    st.caption("💡 Pour l'installation de l'OCR (Tesseract), les comptes et la "
+               "sauvegarde Supabase : regarde les expanders de la colonne de gauche.")
 
 # ---------- PAGE : RECAPITULATIF ----------
 
@@ -2762,4 +3007,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 27 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 28 · IA d'OR 🏆 · " + datetime.date.today().strftime("%d/%m/%Y"))
