@@ -29,7 +29,13 @@ v29.1 : MARQUE CORRIGEE — plus aucune mention d'une autre app : le moteur
 s'appelle desormais 'moteur_analyse' (etait moteur_ia_dor), captions et
 footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
-enregistrement)."""
+enregistrement).
+v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
+fond quasi noir #0b0b0d, cartes anthracite #17171c, accent or #d9b45b
+reserve aux elements importants (bouton principal dore a texte fonce
+contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
+cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
+et formulaires inchanges. Aucune logique modifiee."""
 
 import re
 import io
@@ -1220,23 +1226,24 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: #0e0f12;}
+    .stApp {background: #0b0b0d;}
     .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
     [data-testid="stCaptionContainer"] {color: #c9cdd6 !important;}
-    section[data-testid="stSidebar"] {background: #15161b; border-right: 1px solid #23252c;}
+    section[data-testid="stSidebar"] {background: #141418; border-right: 1px solid #23252c;}
     section[data-testid="stSidebar"] * {color: #b8bcc8 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #15161b; color: #e6e8ec;
-        border: 1px solid #23252c; border-radius: 12px;
+        background: #17171c; color: #e6e8ec;
+        border: 1px solid #26262e; border-left: 3px solid #d9b45b;
+        border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
     .hero h1 {color: #e6e8ec; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;}
     .hero p {color: #8b90a0; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #15161b; color: #9fb0f5; border: 1px solid #2a2d38;
+        display: inline-block; background: #15161b; color: #d9b45b; border: 1px solid #2a2d38;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
@@ -1254,21 +1261,22 @@ st.markdown("""
     .stButton > button {
         background: #1b1d24; color: #d7dae2; border: 1px solid #2a2d38; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #5b7cfa; color: #fff;}
+    .stButton > button:hover {border-color: #d9b45b; color: #fff;}
     .stButton > button[kind="primary"] {
-        background: #5b7cfa; color: #fff; border: none;
+        /* v30 : bouton principal DORE, texte fonce pour un contraste AAA */
+        background: #d9b45b; color: #16130a; border: none; font-weight: 700;
     }
-    .stButton > button[kind="primary"]:hover {background: #6d8bfb;}
+    .stButton > button[kind="primary"]:hover {background: #e6c56d; color: #16130a;}
     .stDownloadButton > button {
-        background: #1b1d24; color: #9fb0f5; border: 1px solid #2a2d38; border-radius: 8px;
+        background: #1b1d24; color: #d9b45b; border: 1px solid #2a2d38; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #5b7cfa; color: #fff;}
+    .stDownloadButton > button:hover {border-color: #d9b45b; color: #fff;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #33363f; border-radius: 12px; padding: .7rem; background: #121318;
+        border: 1.5px dashed #6b5a33; border-radius: 12px; padding: .7rem; background: #121318;
     }
     div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #15161b;}
     .stTabs [data-baseweb="tab"] {color: #8b90a0; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #5b7cfa;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #d9b45b;}
     .stTabs [data-baseweb="tab"]:hover {color: #c9cdd6;}
     hr {border-color: #23252c;}
 
@@ -1283,7 +1291,7 @@ st.markdown("""
 .carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #57b98a;}
 .carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #c9a45c;}
 .carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #d97777;}
-.carte-kpi.bleu {border-color: #2a2d38;}   .carte-kpi.bleu .kpi-val {color: #9fb0f5;}
+.carte-kpi.bleu {border-color: #2a2d38;}   .carte-kpi.bleu .kpi-val {color: #d9b45b;}
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
@@ -1308,7 +1316,7 @@ div[data-testid="stExpander"] {margin-bottom: .45rem;}
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #0e0f12;}
+    section[data-testid="stSidebar"] {background: #0b0b0d;}
 }
 
 </style>
@@ -1333,7 +1341,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 29")
+    st.caption("Version 30")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3093,4 +3101,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 29 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 30 · " + datetime.date.today().strftime("%d/%m/%Y"))
