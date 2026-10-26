@@ -107,11 +107,17 @@ et un peu plus sombre : degrade #B8A6EC -> #C7B7F0 -> #D4C6F5,
 sidebar #C7B7F0.
 v39 : CONFORT VISUEL USAGE PROLONGE : (1) plus AUCUNE surface
 sombre — bulles de chat de l'assistant et blocs de code forces en
-clair (fond #E6E6EE/#EDEDF3, code en noir) ; (2) le blanc PUR des
-cartes, tableaux, metriques et accordéons est ASSOMBRI en #E6E6EE
+clair (fond #E0E0E0/#E6E6E6, code en noir) ; (2) le blanc PUR des
+cartes, tableaux, metriques et accordéons est ASSOMBRI en #E0E0E0
 (adoucit la lumiere pour un poste occupe 6 h/jour) ; (3) champs de
-saisie #F1F1F7 (un ton plus clair que les cartes, texte noir).
-Les ecritures restent noires, accent violet #7c5cd6 inchange."""
+saisie #E9E9E9 (un ton plus clair que les cartes, texte noir).
+Les ecritures restent noires, accent violet #7c5cd6 inchange.
+v40 : SANTE VISUELLE (a la demande de l'auteur, sur echantillon
+visuel) : toutes les surfaces passent au GRIS FROID CLAIR #E0E0E0
+(cartes, tableaux, metriques, accordeons, bulles de chat, piste de
+progression, item actif sidebar) ; champs de saisie #E9E9E9 ; blocs
+de code #E6E6E6. Ecritures noires, accent violet, fond degrade
+violet inchanges."""
 
 import re
 import io
@@ -1347,7 +1353,7 @@ st.markdown("""
     section[data-testid="stSidebar"] * {color: #2b2b2b !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #E6E6EE; color: #141414;
+        background: #E0E0E0; color: #141414;
         border: 1px solid #d9d2ee; border-left: 3px solid #7c5cd6;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
@@ -1357,18 +1363,18 @@ st.markdown("""
         text-transform: uppercase; letter-spacing: 1px;}
     .hero p {color: #555555; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #E6E6EE; color: #7c5cd6; border: 1px solid #c9c2e8;
+        display: inline-block; background: #E0E0E0; color: #7c5cd6; border: 1px solid #c9c2e8;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #d9d2ee; background: #E6E6EE;
+        border-radius: 12px; border: 1px solid #d9d2ee; background: #E0E0E0;
         overflow: hidden;
     }
     div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #1a1a1a !important;}
     div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #2b2b2b !important;}
     div[data-testid="stMetric"] {
-        background: #E6E6EE; border: 1px solid #d9d2ee; border-radius: 12px; padding: .9rem;
+        background: #E0E0E0; border: 1px solid #d9d2ee; border-radius: 12px; padding: .9rem;
     }
     div[data-testid="stMetricLabel"] p {color: #555555 !important;}
     div[data-testid="stMetricValue"] {color: #141414 !important;}
@@ -1388,7 +1394,7 @@ st.markdown("""
     div[data-testid="stFileUploader"] {
         border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #f5f0ff;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #E6E6EE;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #E0E0E0;}
     .stTabs [data-baseweb="tab"] {color: #555555; font-weight: 600;}
     .stTabs [data-baseweb="tab-highlight"] {background: #7c5cd6;}
     .stTabs [data-baseweb="tab"]:hover {color: #1a1a1a;}
@@ -1396,7 +1402,7 @@ st.markdown("""
 
 /* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #E6E6EE; border: 1px solid #d9d2ee; border-radius: 12px;
+    background: #E0E0E0; border: 1px solid #d9d2ee; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
 .carte-kpi .kpi-lib {color: #555555; font-size: .78rem; font-weight: 600;
@@ -1437,13 +1443,13 @@ st.markdown("""
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
     /* v38 : champs de saisie (email, mot de passe...) FORCES en blanc */
-    background-color: #F1F1F7 !important; border-color: #d5d1e3 !important;
+    background-color: #E9E9E9 !important; border-color: #d5d1e3 !important;
     border-radius: 8px;
 }
 /* v38 : filet de securite — cible les <input> eux-memes quelle que
    soit la structure interne de la version de Streamlit */
 .stApp input, .stApp textarea {
-    background-color: #F1F1F7 !important; color: #141414 !important;
+    background-color: #E9E9E9 !important; color: #141414 !important;
     border: 1px solid #d5d1e3 !important; border-radius: 8px;
 }
 .stApp input::placeholder {color: #8a8494 !important;}
@@ -1451,18 +1457,18 @@ st.markdown("""
 /* ---- v39 : plus AUCUNE surface sombre, blancs assombris (confort
      visuel pour un usage prolonge : 6 h/jour sur cet ecran) ---- */
 section[data-testid="stChatMessage"] {
-    background: #E6E6EE !important; border: 1px solid #d9d2ee;
+    background: #E0E0E0 !important; border: 1px solid #d9d2ee;
     border-radius: 12px;
 }
 .stApp pre, .stApp div[data-testid="stCodeBlock"] {
-    background: #EDEDF3 !important; border: 1px solid #d9d2ee;
+    background: #E6E6E6 !important; border: 1px solid #d9d2ee;
     border-radius: 8px;
 }
 .stApp pre code, .stApp div[data-testid="stCodeBlock"] code {
     color: #141414 !important; background: transparent !important;
 }
 .stApp div[data-baseweb="input"] input, .stApp textarea {color: #141414 !important;}
-[data-testid="stProgress"] > div {background: #E6E6EE; border-radius: 999px;}
+[data-testid="stProgress"] > div {background: #E0E0E0; border-radius: 999px;}
 [data-testid="stProgress"] > div > div {background: #7c5cd6;}
 div[data-testid="stDataFrame"] {border: 1px solid #d9d2ee; border-radius: 12px;}
 /* ---- v36 : cartes BLANCHES en relief doux sur fond lavande ---- */
@@ -1478,10 +1484,10 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label {
     border-left: 3px solid transparent;
     transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #E6E6EE;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #E0E0E0;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-    background: #E6E6EE; border-left: 3px solid #7c5cd6;
+    background: #E0E0E0; border-left: 3px solid #7c5cd6;
 }
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
@@ -1552,7 +1558,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 39")
+    st.caption("Version 40")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3427,4 +3433,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 39 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 40 · " + datetime.date.today().strftime("%d/%m/%Y"))
