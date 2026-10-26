@@ -31,7 +31,7 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #C7B7F0, cartes anthracite #FFFFFF, accent or #7c5cd6
+fond quasi noir #C7B7F0, cartes anthracite #FFFFFF, accent or #a78bfa
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
@@ -48,7 +48,7 @@ avertissement inline + rappel disque ephemere Streamlit Cloud) ;
 avert_persist, avec bouton d'acquittement. Aucune signature d'appel
 cassee : les retours sont additives.
 v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #C7B7F0, cartes #FFFFFF,
-bordures #333, or #7c5cd6) + fil d'Ariane dynamique « Espace de
+bordures #333, or #a78bfa) + fil d'Ariane dynamique « Espace de
 travail / page » + badges de statut arrondis sur le tableau de bord
 + sidebar renommee (« Espace de travail », « Votre espace
 documentaire ») + OCR : alerte si echeance anterieure a la date de
@@ -68,10 +68,10 @@ tableaux bordes. Aucune logique de calcul modifiee.
 v34 : PALETTE SYNTHWAVE HARMONIEUSE (a la demande de l'auteur : les
 couleurs precedentes ne se mariaient pas). Tout le theme passe en
 violets profonds qui se fondent : fond en DEGRADE (150b26 -> 241440),
-cartes #FFFFFF, bordures #d9d2ee, accents LAVANDE #7c5cd6 (bouton
+cartes #FFFFFF, bordures #3D2B5E, accents LAVANDE #a78bfa (bouton
 principal, section-titres, marque, item actif, barre de progression),
-texte #141414, stats en neons assortis (menthe #2e9e6f, peche #d18a2a,
-rose #e05c74), lueur douce sur le titre. AUCUNE logique modifiee :
+texte #F2F0FA, stats en neons assortis (menthe #57e6a8, peche #ffb84d,
+rose #ff7d90), lueur douce sur le titre. AUCUNE logique modifiee :
 uniquement des valeurs CSS.
 v35 : ECRITURE NORMALE & SECTIONS EPUREES (a la demande de l'auteur,
 sur exemples visuels) : toute la documentation de la sidebar (essais,
@@ -89,17 +89,17 @@ v36 : THEME LAVANDE CLAIR & BLANC (a la demande de l'auteur, sur
 exemple visuel de degrade lavande pale) : le violet profond laisse
 place a un fond en DEGRADE lavande clair (#B8A6EC -> #D4C6F5),
 cartes/accordeons/champs BLANCS avec ombre violette tres douce,
-bordures lavande #d9d2ee, accent violet #7c5cd6 (bouton principal
+bordures lavande #3D2B5E, accent violet #a78bfa (bouton principal
 violet a texte blanc, item actif, marque, titres de sections, barre
-de progression), textes gris-violet #141414/#1a1a1a, stats foncees
-pour rester lisibles sur blanc (vert #2e9e6f, peche #d18a2a, rose
-#e05c74). Lueur du titre retiree. AUCUNE logique modifiee :
+de progression), textes gris-violet #F2F0FA/#1a1a1a, stats foncees
+pour rester lisibles sur blanc (vert #57e6a8, peche #ffb84d, rose
+#ff7d90). Lueur du titre retiree. AUCUNE logique modifiee :
 uniquement des valeurs CSS.
 v37 : AJUSTEMENTS DEMANDES : fond UN PEU PLUS VIOLET (degrade
 #B8A6EC -> #D4C6F5, sidebar #C7B7F0), TOUTES les ecritures en NOIR
-(#141414 / #1a1a1a, textes secondaires #2b2b2b et #555555), champs de
+(#F2F0FA / #1a1a1a, textes secondaires #CFC9E0 et #a99fc0), champs de
 saisie (email, mot de passe...) en GRIS TRES CLAIR #f3f2f6 bordure
-#d5d1e3. Cartes toujours blanches, accent violet #7c5cd6 inchange.
+#4A3A72. Cartes toujours blanches, accent violet #a78bfa inchange.
 v38 : (1) cases email/mot de passe FORCES en blanc par un selecteur
 direct sur les <input> eux-memes (le CSS precedent ne matchait pas
 la structure interne de la version Streamlit) ; (2) fond PLUS VIOLET
@@ -107,16 +107,16 @@ et un peu plus sombre : degrade #B8A6EC -> #C7B7F0 -> #D4C6F5,
 sidebar #C7B7F0.
 v39 : CONFORT VISUEL USAGE PROLONGE : (1) plus AUCUNE surface
 sombre — bulles de chat de l'assistant et blocs de code forces en
-clair (fond #E0E0E0/#DCDCE1, code en noir) ; (2) le blanc PUR des
-cartes, tableaux, metriques et accordéons est ASSOMBRI en #E0E0E0
+clair (fond #2A2145/#322652, code en noir) ; (2) le blanc PUR des
+cartes, tableaux, metriques et accordéons est ASSOMBRI en #2A2145
 (adoucit la lumiere pour un poste occupe 6 h/jour) ; (3) champs de
-saisie #DCDCE1 (un ton plus clair que les cartes, texte noir).
-Les ecritures restent noires, accent violet #7c5cd6 inchange.
+saisie #322652 (un ton plus clair que les cartes, texte noir).
+Les ecritures restent noires, accent violet #a78bfa inchange.
 v40 : SANTE VISUELLE (a la demande de l'auteur, sur echantillon
-visuel) : toutes les surfaces passent au GRIS FROID CLAIR #E0E0E0
+visuel) : toutes les surfaces passent au GRIS FROID CLAIR #2A2145
 (cartes, tableaux, metriques, accordeons, bulles de chat, piste de
-progression, item actif sidebar) ; champs de saisie #DCDCE1 ; blocs
-de code #DCDCE1. Ecritures noires, accent violet, fond degrade
+progression, item actif sidebar) ; champs de saisie #322652 ; blocs
+de code #322652. Ecritures noires, accent violet, fond degrade
 violet inchanges.
 v41 : VIOLET NUIT (symetrie demandee : le blanc est devenu gris ->
 le violet devient la meme couleur mais EXTREMEMENT sombre) : fond
@@ -126,20 +126,31 @@ champs, alertes, blocs de code et bulles de chat : NOIRES (regles
 de securite). Accents de la sidebar passes en lavande lumineuse
 #a78bfa (marque, titres de sections, item actif) pour rester
 lisibles sur le fond sombre ; badges du tableau de bord en tons
-neon clairs. Cartes et champs restent GRIS #E0E0E0/#DCDCE1.
-v42 : ECRITURES NOIRES : regle forcant le noir pur #141414 sur
+neon clairs. Cartes et champs restent GRIS #2A2145/#322652.
+v42 : ECRITURES NOIRES : regle forcant le noir pur #F2F0FA sur
 TOUTES les surfaces grises (hero, accordeons, metriques, bulles de
 chat, alertes, uploader) ; le gris clair #D8D4E8 ne subsiste QUE
 pour les textes poses directement sur le fond violet nuit (du noir
 y serait illisible).
 v43 : CASES UNIFIEES : toutes les cases encore blanches ou plus
 claires (champs de saisie, zone de depot de fichiers, blocs de
-code) passent en UN SEUL gris harmonieux #DCDCE1, ton qui se marie
-avec les cartes grises #E0E0E0 et le fond violet nuit.
+code) passent en UN SEUL gris harmonieux #322652, ton qui se marie
+avec les cartes grises #2A2145 et le fond violet nuit.
 v44 : filet ULTIME sur les cases : tout <input>/<textarea>/<select>
-de l'application = fond gris #DCDCE1 + texte NOIR force (color,
+de l'application = fond gris #322652 + texte NOIR force (color,
 -webkit-text-fill-color, caret-color) — corrige le texte gris pale
-illisible signale dans les champs email/mot de passe."""
+illisible signale dans les champs email/mot de passe.
+v45 : ECRITURES BLANCHES PARTOUT (a la demande de l'auteur : « les
+ecritures doivent etre blanches, meme le tableau de bord, la barre
+laterale et tout le contenu ») : les surfaces passent en violet
+sombre assorci pour que le blanc soit lisible — cartes/metrics/
+accordeons/bulles #2A2145, cases et boutons #322652, bordures
+#3D2B5E/#4A3A72, textes #F2F0FA (titres) et #CFC9E0 (corps), labels
+#a99fc0, accent lavande #a78bfa, stats neon claires, uploader
+sombre a texte clair. Les alertes Streamlit gardent leur texte
+fonce (fond clair d'origine). RAPPEL DEPLOIEMENT : rien ne change sur
+le site tant que le code n'est pas copie dans app_factures.py et
+pousse sur GitHub."""
 
 import re
 import io
@@ -1377,65 +1388,65 @@ st.markdown("""
     section[data-testid="stSidebar"] * {color: #cfc9e0 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #E0E0E0; color: #141414;
-        border: 1px solid #d9d2ee; border-left: 3px solid #7c5cd6;
+        background: #2A2145; color: #F2F0FA;
+        border: 1px solid #3D2B5E; border-left: 3px solid #a78bfa;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #141414; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
-    .hero p.breadcrumb {color: #555555; margin: 0 0 .25rem 0; font-size: .78rem;
+    .hero h1 {color: #F2F0FA; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
+    .hero p.breadcrumb {color: #a99fc0; margin: 0 0 .25rem 0; font-size: .78rem;
         text-transform: uppercase; letter-spacing: 1px;}
-    .hero p {color: #555555; margin: .35rem 0 0 0; font-size: .95rem;}
+    .hero p {color: #a99fc0; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #E0E0E0; color: #7c5cd6; border: 1px solid #c9c2e8;
+        display: inline-block; background: #2A2145; color: #a78bfa; border: 1px solid #4A3A72;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #d9d2ee; background: #E0E0E0;
+        border-radius: 12px; border: 1px solid #3D2B5E; background: #2A2145;
         overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #1a1a1a !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #2b2b2b !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #E6E1F2 !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #CFC9E0 !important;}
     div[data-testid="stMetric"] {
-        background: #E0E0E0; border: 1px solid #d9d2ee; border-radius: 12px; padding: .9rem;
+        background: #2A2145; border: 1px solid #3D2B5E; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #555555 !important;}
-    div[data-testid="stMetricValue"] {color: #141414 !important;}
+    div[data-testid="stMetricLabel"] p {color: #a99fc0 !important;}
+    div[data-testid="stMetricValue"] {color: #F2F0FA !important;}
     .stButton > button {
-        background: #ece4fb; color: #1a1a1a; border: 1px solid #c9c2e8; border-radius: 8px;
+        background: #322652; color: #F2F0FA; border: 1px solid #4A3A72; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #7c5cd6; color: #141414;}
+    .stButton > button:hover {border-color: #a78bfa; color: #F2F0FA;}
     .stButton > button[kind="primary"] {
         /* v36 : bouton principal VIOLET, texte blanc */
-        background: #7c5cd6; color: #FFFFFF; border: none; font-weight: 700;
+        background: #a78bfa; color: #FFFFFF; border: none; font-weight: 700;
     }
     .stButton > button[kind="primary"]:hover {background: #9171e8; color: #FFFFFF;}
     .stDownloadButton > button {
-        background: #ece4fb; color: #7c5cd6; border: 1px solid #c9c2e8; border-radius: 8px;
+        background: #322652; color: #a78bfa; border: 1px solid #4A3A72; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #7c5cd6; color: #141414;}
+    .stDownloadButton > button:hover {border-color: #a78bfa; color: #F2F0FA;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #DCDCE1;
+        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #322652;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #E0E0E0;}
-    .stTabs [data-baseweb="tab"] {color: #555555; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #7c5cd6;}
-    .stTabs [data-baseweb="tab"]:hover {color: #1a1a1a;}
-    hr {border-color: #d9d2ee;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #2A2145;}
+    .stTabs [data-baseweb="tab"] {color: #a99fc0; font-weight: 600;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
+    .stTabs [data-baseweb="tab"]:hover {color: #FFFFFF;}
+    hr {border-color: #3D2B5E;}
 
 /* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #E0E0E0; border: 1px solid #d9d2ee; border-radius: 12px;
+    background: #2A2145; border: 1px solid #3D2B5E; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #555555; font-size: .78rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #a99fc0; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #141414; font-size: 1.35rem; font-weight: 700;}
-.carte-kpi.vert {border-color: #bfe3d2;}   .carte-kpi.vert .kpi-val {color: #2e9e6f;}
-.carte-kpi.orange {border-color: #f0dcbc;} .carte-kpi.orange .kpi-val {color: #d18a2a;}
-.carte-kpi.rouge {border-color: #f3ccd3;}  .carte-kpi.rouge .kpi-val {color: #e05c74;}
-.carte-kpi.bleu {border-color: #c9c2e8;}   .carte-kpi.bleu .kpi-val {color: #7c5cd6;}
+.carte-kpi .kpi-val {color: #F2F0FA; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi.vert {border-color: #bfe3d2;}   .carte-kpi.vert .kpi-val {color: #57e6a8;}
+.carte-kpi.orange {border-color: #f0dcbc;} .carte-kpi.orange .kpi-val {color: #ffb84d;}
+.carte-kpi.rouge {border-color: #f3ccd3;}  .carte-kpi.rouge .kpi-val {color: #ff7d90;}
+.carte-kpi.bleu {border-color: #4A3A72;}   .carte-kpi.bleu .kpi-val {color: #a78bfa;}
 
 /* ---- v32 : badges de statut arrondis, comme la maquette ---- */
 .badge {
@@ -1443,21 +1454,21 @@ st.markdown("""
     font-size: .74rem; font-weight: 600; letter-spacing: .3px;
     margin: 0 .25rem .25rem 0; border: 1px solid transparent;
 }
-.badge.apayer   {background: rgba(209,138,42,.14); color: #d18a2a; border-color: rgba(209,138,42,.45);}
+.badge.apayer   {background: rgba(209,138,42,.14); color: #ffb84d; border-color: rgba(209,138,42,.45);}
 .badge.partielle{background: rgba(138,111,240,.14); color: #b39dff; border-color: rgba(138,111,240,.45);}
-.badge.averif   {background: rgba(124,92,214,.12); color: #7c5cd6; border-color: rgba(124,92,214,.45);}
-.badge.payee    {background: rgba(46,158,111,.12); color: #2e9e6f; border-color: rgba(46,158,111,.45);}
-.badge.retard   {background: rgba(224,92,116,.12); color: #e05c74; border-color: rgba(224,92,116,.45);}
+.badge.averif   {background: rgba(124,92,214,.12); color: #a78bfa; border-color: rgba(124,92,214,.45);}
+.badge.payee    {background: rgba(46,158,111,.12); color: #57e6a8; border-color: rgba(46,158,111,.45);}
+.badge.retard   {background: rgba(224,92,116,.12); color: #ff7d90; border-color: rgba(224,92,116,.45);}
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
     color: #a78bfa !important; font-weight: 700; font-size: .72rem;
     letter-spacing: 1.4px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #d9d2ee; padding-bottom: .3rem;
+    border-bottom: 1px solid #3D2B5E; padding-bottom: .3rem;
 }
 .sidebar-note {
-    color: #555555 !important; font-size: .74rem; margin: .3rem 0 0 0;
+    color: #a99fc0 !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
 .sidebar-note strong {color: #a78bfa !important;}
 
@@ -1467,20 +1478,20 @@ st.markdown("""
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
     /* v38 : champs de saisie (email, mot de passe...) FORCES en blanc */
-    background-color: #DCDCE1 !important; border-color: #d5d1e3 !important;
+    background-color: #322652 !important; border-color: #4A3A72 !important;
     border-radius: 8px;
 }
 /* v44 : filet ULTIME — n'importe quelle case de saisie, quelle que
-   soit sa structure interne : fond gris #DCDCE1, texte NOIR
+   soit sa structure interne : fond gris #322652, texte NOIR
    (color + webkit-text-fill-color pour navigateurs WebKit). */
 .stApp input, .stApp input[type="text"], .stApp input[type="password"],
 .stApp input[type="email"], .stApp input[type="number"],
 .stApp textarea, .stApp select {
-    background-color: #DCDCE1 !important;
-    color: #141414 !important;
-    -webkit-text-fill-color: #141414 !important;
-    caret-color: #141414 !important;
-    border: 1px solid #d5d1e3 !important;
+    background-color: #322652 !important;
+    color: #F2F0FA !important;
+    -webkit-text-fill-color: #F2F0FA !important;
+    caret-color: #F2F0FA !important;
+    border: 1px solid #4A3A72 !important;
     border-radius: 8px;
 }
 .stApp input::placeholder {color: #8a8494 !important;}
@@ -1489,7 +1500,7 @@ st.markdown("""
 /* boutons et bulles de chat gardent un texte NOIR sur fond clair */
 .stButton > button, .stButton > button *,
 .stDownloadButton > button, .stDownloadButton > button * {
-    color: #141414 !important;
+    color: #F2F0FA !important;
 }
 .stButton > button[kind="primary"], .stButton > button[kind="primary"] * {
     color: #FFFFFF !important;
@@ -1497,18 +1508,18 @@ st.markdown("""
 section[data-testid="stChatMessage"] p,
 section[data-testid="stChatMessage"] li,
 section[data-testid="stChatMessage"] span {
-    color: #2b2b2b !important;
+    color: #CFC9E0 !important;
 }
 .stTabs [data-baseweb="tab"] {color: #cfc9e0 !important; font-weight: 600;}
 .stTabs [data-baseweb="tab"]:hover {color: #FFFFFF !important;}
 .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
 /* v41 : les zones CLAIRES de Streamlit gardent un texte noir */
-[data-testid="stAlert"] *, div[data-baseweb="toast"] *,
-div[data-testid="stFileUploader"] * {color: #1a1a1a !important;}
-section[data-testid="stChatMessage"] * {color: #2b2b2b !important;}
+[data-testid="stAlert"] *, div[data-baseweb="toast"] * {color: #1a1a1a !important;}
+div[data-testid="stFileUploader"] * {color: #E8E4F2 !important;}
+section[data-testid="stChatMessage"] * {color: #CFC9E0 !important;}
 /* ---- v42 : sur les surfaces GRISES, ecritures 100 % NOIRES ---- */
 .hero *, div[data-testid="stExpander"] *,
-div[data-testid="stMetric"] * {color: #141414 !important;}
+div[data-testid="stMetric"] * {color: #F2F0FA !important;}
 /* badges clairs sur fond sombre */
 .badge.apayer   {background: rgba(255,152,0,.16); color: #ffb84d; border-color: rgba(255,184,77,.5);}
 .badge.partielle{background: rgba(156,120,255,.16); color: #b39dff; border-color: rgba(179,157,255,.5);}
@@ -1519,26 +1530,26 @@ div[data-testid="stMetric"] * {color: #141414 !important;}
 /* ---- v39 : plus AUCUNE surface sombre, blancs assombris (confort
      visuel pour un usage prolonge : 6 h/jour sur cet ecran) ---- */
 section[data-testid="stChatMessage"] {
-    background: #E0E0E0 !important; border: 1px solid #d9d2ee;
+    background: #2A2145 !important; border: 1px solid #3D2B5E;
     border-radius: 12px;
 }
 .stApp pre, .stApp div[data-testid="stCodeBlock"] {
-    background: #DCDCE1 !important; border: 1px solid #d9d2ee;
+    background: #322652 !important; border: 1px solid #3D2B5E;
     border-radius: 8px;
 }
 .stApp pre code, .stApp div[data-testid="stCodeBlock"] code {
-    color: #141414 !important; background: transparent !important;
+    color: #F2F0FA !important; background: transparent !important;
 }
-.stApp div[data-baseweb="input"] input, .stApp textarea {color: #141414 !important;}
-[data-testid="stProgress"] > div {background: #E0E0E0; border-radius: 999px;}
-[data-testid="stProgress"] > div > div {background: #7c5cd6;}
-div[data-testid="stDataFrame"] {border: 1px solid #d9d2ee; border-radius: 12px;}
+.stApp div[data-baseweb="input"] input, .stApp textarea {color: #F2F0FA !important;}
+[data-testid="stProgress"] > div {background: #2A2145; border-radius: 999px;}
+[data-testid="stProgress"] > div > div {background: #a78bfa;}
+div[data-testid="stDataFrame"] {border: 1px solid #3D2B5E; border-radius: 12px;}
 /* ---- v36 : cartes BLANCHES en relief doux sur fond lavande ---- */
 .hero, .carte-kpi, div[data-testid="stMetric"],
 div[data-testid="stExpander"], div[data-testid="stDataFrame"] {
     box-shadow: 0 2px 12px rgba(124,92,214,.10);
 }
-div[data-testid="stExpander"] summary:hover span {color: #7c5cd6 !important;}
+div[data-testid="stExpander"] summary:hover span {color: #a78bfa !important;}
 /* ---- v32 : menu de la sidebar, style maquette ---- */
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
     padding: .42rem .6rem; border-radius: 8px; font-weight: 500;
@@ -1566,13 +1577,13 @@ div[data-testid="stExpander"] summary span {
     color: #1a1a1a !important; font-weight: 500; font-size: .87rem;
 }
 div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
-    color: #2b2b2b !important; font-size: .87rem;
+    color: #CFC9E0 !important; font-size: .87rem;
     line-height: 1.6; font-weight: 400;
 }
 div[data-testid="stExpander"] strong {
     color: #e4dcf5 !important; font-weight: 600;
 }
-section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #7c5cd6 !important;}
+section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #a78bfa !important;}
 
 
 /* ---- v21 : confort sur telephone ---- */
@@ -1620,7 +1631,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 44")
+    st.caption("Version 45")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3495,4 +3506,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 44 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 45 · " + datetime.date.today().strftime("%d/%m/%Y"))
