@@ -31,7 +31,7 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #0A0A0A, cartes anthracite #1E1E1E, accent or #FFD700
+fond quasi noir #1a0d2e, cartes anthracite #241638, accent or #a78bfa
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
@@ -47,8 +47,8 @@ avertissement inline + rappel disque ephemere Streamlit Cloud) ;
 (4) messages d'erreur en sidebar pour erreur_sqlite / erreur_pdf /
 avert_persist, avec bouton d'acquittement. Aucune signature d'appel
 cassee : les retours sont additives.
-v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #0A0A0A, cartes #1E1E1E,
-bordures #333, or #FFD700) + fil d'Ariane dynamique « Espace de
+v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #1a0d2e, cartes #241638,
+bordures #333, or #a78bfa) + fil d'Ariane dynamique « Espace de
 travail / page » + badges de statut arrondis sur le tableau de bord
 + sidebar renommee (« Espace de travail », « Votre espace
 documentaire ») + OCR : alerte si echeance anterieure a la date de
@@ -64,7 +64,15 @@ comptables », « Aide & réglages ») — les VALEURS (cles de pages)
 sont inchangees, aucun if page == a modifier ; (3) finitions : marque
 sidebar en or majuscules, titre « Navigation » supprime, container
 elargi 1400px, champs de saisie sombres, barre de progression doree,
-tableaux bordes. Aucune logique de calcul modifiee."""
+tableaux bordes. Aucune logique de calcul modifiee.
+v34 : PALETTE SYNTHWAVE HARMONIEUSE (a la demande de l'auteur : les
+couleurs precedentes ne se mariaient pas). Tout le theme passe en
+violets profonds qui se fondent : fond en DEGRADE (150b26 -> 241440),
+cartes #241638, bordures #3d2a5c, accents LAVANDE #a78bfa (bouton
+principal, section-titres, marque, item actif, barre de progression),
+texte #ece6f5, stats en neons assortis (menthe #57e6a8, peche #ffb84d,
+rose #ff7d90), lueur douce sur le titre. AUCUNE logique modifiee :
+uniquement des valeurs CSS."""
 
 import re
 import io
@@ -1291,74 +1299,75 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: #0A0A0A;}
+    .stApp {background: linear-gradient(160deg, #150b26 0%, #1a0d2e 45%, #241440 100%);}
     .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #cfcfcf !important;}
-    section[data-testid="stSidebar"] {background: #0A0A0A; border-right: 1px solid #333333;}
-    section[data-testid="stSidebar"] * {color: #b0b0b0 !important;}
+    [data-testid="stCaptionContainer"] {color: #cfc4e8 !important;}
+    section[data-testid="stSidebar"] {background: #1a0d2e; border-right: 1px solid #3d2a5c;}
+    section[data-testid="stSidebar"] * {color: #b3a6d4 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #1E1E1E; color: #E0E0E0;
-        border: 1px solid #333333; border-left: 3px solid #FFD700;
+        background: #241638; color: #ece6f5;
+        border: 1px solid #3d2a5c; border-left: 3px solid #a78bfa;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #E0E0E0; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;}
-    .hero p.breadcrumb {color: #8f8f8f; margin: 0 0 .25rem 0; font-size: .78rem;
+    .hero h1 {color: #ece6f5; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;
+        text-shadow: 0 0 22px rgba(167,139,250,.45);}
+    .hero p.breadcrumb {color: #9d8fc0; margin: 0 0 .25rem 0; font-size: .78rem;
         text-transform: uppercase; letter-spacing: 1px;}
-    .hero p {color: #8f8f8f; margin: .35rem 0 0 0; font-size: .95rem;}
+    .hero p {color: #9d8fc0; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #161616; color: #FFD700; border: 1px solid #3a3a3a;
+        display: inline-block; background: #1f1233; color: #a78bfa; border: 1px solid #46306b;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #333333; background: #161616;
+        border-radius: 12px; border: 1px solid #3d2a5c; background: #1f1233;
         overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d6d6d6 !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b0b0b0 !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d8cef0 !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b3a6d4 !important;}
     div[data-testid="stMetric"] {
-        background: #161616; border: 1px solid #333333; border-radius: 12px; padding: .9rem;
+        background: #1f1233; border: 1px solid #3d2a5c; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #8f8f8f !important;}
-    div[data-testid="stMetricValue"] {color: #E0E0E0 !important;}
+    div[data-testid="stMetricLabel"] p {color: #9d8fc0 !important;}
+    div[data-testid="stMetricValue"] {color: #ece6f5 !important;}
     .stButton > button {
-        background: #232323; color: #d6d6d6; border: 1px solid #3a3a3a; border-radius: 8px;
+        background: #2c1b45; color: #d8cef0; border: 1px solid #46306b; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #FFD700; color: #fff;}
+    .stButton > button:hover {border-color: #a78bfa; color: #fff;}
     .stButton > button[kind="primary"] {
         /* v30 : bouton principal DORE, texte fonce pour un contraste AAA */
-        background: #FFD700; color: #16130a; border: none; font-weight: 700;
+        background: #a78bfa; color: #1c1033; border: none; font-weight: 700;
     }
-    .stButton > button[kind="primary"]:hover {background: #FFDE59; color: #16130a;}
+    .stButton > button[kind="primary"]:hover {background: #b899ff; color: #1c1033;}
     .stDownloadButton > button {
-        background: #232323; color: #FFD700; border: 1px solid #3a3a3a; border-radius: 8px;
+        background: #2c1b45; color: #a78bfa; border: 1px solid #46306b; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #FFD700; color: #fff;}
+    .stDownloadButton > button:hover {border-color: #a78bfa; color: #fff;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #6b5a33; border-radius: 12px; padding: .7rem; background: #121212;
+        border: 1.5px dashed #5b4392; border-radius: 12px; padding: .7rem; background: #170d28;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #161616;}
-    .stTabs [data-baseweb="tab"] {color: #8f8f8f; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #FFD700;}
-    .stTabs [data-baseweb="tab"]:hover {color: #cfcfcf;}
-    hr {border-color: #333333;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #1f1233;}
+    .stTabs [data-baseweb="tab"] {color: #9d8fc0; font-weight: 600;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
+    .stTabs [data-baseweb="tab"]:hover {color: #cfc4e8;}
+    hr {border-color: #3d2a5c;}
 
 /* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #161616; border: 1px solid #333333; border-radius: 12px;
+    background: #1f1233; border: 1px solid #3d2a5c; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #8f8f8f; font-size: .78rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #9d8fc0; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #E0E0E0; font-size: 1.35rem; font-weight: 700;}
-.carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #57b98a;}
-.carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #c9a45c;}
-.carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #d97777;}
-.carte-kpi.bleu {border-color: #3a3a3a;}   .carte-kpi.bleu .kpi-val {color: #FFD700;}
+.carte-kpi .kpi-val {color: #ece6f5; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi.vert {border-color: #2a5c46;}   .carte-kpi.vert .kpi-val {color: #57e6a8;}
+.carte-kpi.orange {border-color: #5c4526;} .carte-kpi.orange .kpi-val {color: #ffb84d;}
+.carte-kpi.rouge {border-color: #5c2a2a;}  .carte-kpi.rouge .kpi-val {color: #ff7d90;}
+.carte-kpi.bleu {border-color: #46306b;}   .carte-kpi.bleu .kpi-val {color: #a78bfa;}
 
 /* ---- v32 : badges de statut arrondis, comme la maquette ---- */
 .badge {
@@ -1368,34 +1377,34 @@ st.markdown("""
 }
 .badge.apayer   {background: rgba(255,152,0,.14); color: #ffb84d; border-color: rgba(255,152,0,.45);}
 .badge.partielle{background: rgba(156,120,255,.14); color: #b39dff; border-color: rgba(156,120,255,.45);}
-.badge.averif   {background: rgba(255,215,0,.12); color: #FFD700; border-color: rgba(255,215,0,.45);}
-.badge.payee    {background: rgba(87,185,138,.14); color: #57b98a; border-color: rgba(87,185,138,.45);}
-.badge.retard   {background: rgba(217,119,119,.14); color: #d97777; border-color: rgba(217,119,119,.45);}
+.badge.averif   {background: rgba(167,139,250,.12); color: #a78bfa; border-color: rgba(167,139,250,.45);}
+.badge.payee    {background: rgba(87,230,168,.12); color: #57e6a8; border-color: rgba(87,230,168,.45);}
+.badge.retard   {background: rgba(255,125,144,.12); color: #ff7d90; border-color: rgba(255,125,144,.45);}
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #FFD700 !important; font-weight: 700; font-size: .72rem;
+    color: #a78bfa !important; font-weight: 700; font-size: .72rem;
     letter-spacing: 1.4px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #333333; padding-bottom: .3rem;
+    border-bottom: 1px solid #3d2a5c; padding-bottom: .3rem;
 }
 .sidebar-note {
-    color: #8f8f8f !important; font-size: .74rem; margin: .3rem 0 0 0;
+    color: #9d8fc0 !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
-.sidebar-note strong {color: #FFD700 !important;}
+.sidebar-note strong {color: #a78bfa !important;}
 
 /* ---- v33 : finitions « trait pour trait » ---- */
-.marque {color: #FFD700 !important; font-weight: 800; font-size: 1rem;
+.marque {color: #a78bfa !important; font-weight: 800; font-size: 1rem;
     letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
-    background-color: #1E1E1E !important; border-color: #3a3a3a !important;
+    background-color: #241638 !important; border-color: #46306b !important;
     border-radius: 8px;
 }
-.stApp div[data-baseweb="input"] input, .stApp textarea {color: #E0E0E0 !important;}
-[data-testid="stProgress"] > div {background: #1E1E1E; border-radius: 999px;}
-[data-testid="stProgress"] > div > div {background: #FFD700;}
-div[data-testid="stDataFrame"] {border: 1px solid #333333; border-radius: 12px;}
+.stApp div[data-baseweb="input"] input, .stApp textarea {color: #ece6f5 !important;}
+[data-testid="stProgress"] > div {background: #241638; border-radius: 999px;}
+[data-testid="stProgress"] > div > div {background: #a78bfa;}
+div[data-testid="stDataFrame"] {border: 1px solid #3d2a5c; border-radius: 12px;}
 div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
 /* ---- v32 : menu de la sidebar, style maquette ---- */
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
@@ -1404,16 +1413,16 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label {
     border-left: 3px solid transparent;
     transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1E1E1E;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #241638;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-    background: #1E1E1E; border-left: 3px solid #FFD700;
+    background: #241638; border-left: 3px solid #a78bfa;
 }
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked),
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
-    color: #FFD700 !important; font-weight: 600;
+    color: #a78bfa !important; font-weight: 600;
 }
 /* pastille ronde masquee : rend le menu aussi epure que la maquette */
 section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
@@ -1429,7 +1438,7 @@ div[data-testid="stExpander"] {margin-bottom: .45rem;}
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #0A0A0A;}
+    section[data-testid="stSidebar"] {background: #1a0d2e;}
 }
 
 </style>
@@ -1466,7 +1475,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 33")
+    st.caption("Version 34")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3356,4 +3365,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 33 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 34 · " + datetime.date.today().strftime("%d/%m/%Y"))
