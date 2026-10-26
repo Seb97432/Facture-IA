@@ -52,7 +52,19 @@ bordures #333, or #FFD700) + fil d'Ariane dynamique « Espace de
 travail / page » + badges de statut arrondis sur le tableau de bord
 + sidebar renommee (« Espace de travail », « Votre espace
 documentaire ») + OCR : alerte si echeance anterieure a la date de
-facture ou annee aberrante (aucune valeur modifiee)."""
+facture ou annee aberrante (aucune valeur modifiee).
+v33 : CARTES FACTURE + NAVIGATION MAQUETTE : (1) chaque PDF lu affiche
+un bouton « PDF original » (download du fichier depose) directement
+dans sa carte, a cote du texte brut lu (« Ce que l'IA a lu ») et du
+tableau editable st.data_editor (correction directe, deja present) ;
+(2) radios de navigation avec format_func = libelles EXACTS de la
+maquette, sans emojis (« Vue d'ensemble », « Mes factures (03) »,
+« Paiements », « Comptabilité », « Assistant IA », « Exports
+comptables », « Aide & réglages ») — les VALEURS (cles de pages)
+sont inchangees, aucun if page == a modifier ; (3) finitions : marque
+sidebar en or majuscules, titre « Navigation » supprime, container
+elargi 1400px, champs de saisie sombres, barre de progression doree,
+tableaux bordes. Aucune logique de calcul modifiee."""
 
 import re
 import io
@@ -1280,7 +1292,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     .stApp {background: #0A0A0A;}
-    .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
+    .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
     [data-testid="stCaptionContainer"] {color: #cfcfcf !important;}
@@ -1371,11 +1383,25 @@ st.markdown("""
     color: #8f8f8f !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
 .sidebar-note strong {color: #FFD700 !important;}
+
+/* ---- v33 : finitions « trait pour trait » ---- */
+.marque {color: #FFD700 !important; font-weight: 800; font-size: 1rem;
+    letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
+.stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
+.stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
+    background-color: #1E1E1E !important; border-color: #3a3a3a !important;
+    border-radius: 8px;
+}
+.stApp div[data-baseweb="input"] input, .stApp textarea {color: #E0E0E0 !important;}
+[data-testid="stProgress"] > div {background: #1E1E1E; border-radius: 999px;}
+[data-testid="stProgress"] > div > div {background: #FFD700;}
+div[data-testid="stDataFrame"] {border: 1px solid #333333; border-radius: 12px;}
 div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
 /* ---- v32 : menu de la sidebar, style maquette ---- */
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
     padding: .42rem .6rem; border-radius: 8px; font-weight: 500;
-    letter-spacing: .3px; border-left: 3px solid transparent;
+    letter-spacing: .8px; font-size: .78rem; text-transform: uppercase;
+    border-left: 3px solid transparent;
     transition: background .15s;
 }
 section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1E1E1E;}
@@ -1416,10 +1442,10 @@ _TITRES_PAGES = {
     "🏠 Tableau de bord": "Vue d'ensemble",
     "📄 Factures PDF": "Mes factures",
     "💰 Paiements": "Paiements",
-    "📋 Récapitulatif": "Récapitulatif",
+    "📋 Récapitulatif": "Comptabilité",
     "🤖 Assistant": "Assistant IA",
-    "📤 Pour le comptable": "Comptabilité",
-    "❓ Aide": "Aide & informations",
+    "📤 Pour le comptable": "Exports comptables",
+    "❓ Aide": "Aide & réglages",
 }
 _page_hero = st.session_state.get("page_courante", "🏠 Tableau de bord")
 _titre_hero = _TITRES_PAGES.get(_page_hero, "Vue d'ensemble")
@@ -1438,9 +1464,9 @@ if "recap" not in st.session_state:
     st.session_state["recap"] = db_charger()
 
 with st.sidebar:
-    st.markdown("### 🧾 Factures IA")
+    st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 32")
+    st.caption("Version 33")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1607,7 +1633,7 @@ with st.sidebar:
             st.rerun()
     st.divider()
 
-    st.markdown("### 🧭 Navigation")
+    # v33 : plus de titre « Navigation » — la maquette n'en a pas.
     # v28 : compteur de capacite, toujours visible
     nb_factures = len(st.session_state.get("recap") or [])
     reste_f = LIMITE_FACTURES - nb_factures
@@ -1631,6 +1657,14 @@ with st.sidebar:
     if "page_courante" not in st.session_state:
         st.session_state["page_courante"] = "🏠 Tableau de bord"
     page = st.session_state["page_courante"]
+    # v33 : libelles de navigation EXACTS de la maquette, sans emojis.
+    # format_func change seulement le TEXTE affiche : les valeurs (cles de
+    # pages) restent identiques, donc AUCUN if page == "..." a modifier.
+    def _libelle_page(cle):
+        if cle == "📄 Factures PDF":
+            return "Mes factures (" + str(nb_factures).zfill(2) + ")"
+        return _TITRES_PAGES.get(cle, cle)
+
     st.radio(
         "Choisir une page",
         ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
@@ -1638,11 +1672,8 @@ with st.sidebar:
         key="navigation_page",
         label_visibility="collapsed",
         on_change=_nav_a,
+        format_func=_libelle_page,
     )
-    # v32 : compteur style maquette « Mes factures (03) »
-    st.markdown('<p class="sidebar-note">Mes factures · <strong>' +
-                str(nb_factures).zfill(2) + '</strong> document(s) enregistré(s)</p>',
-                unsafe_allow_html=True)
     st.markdown('<p class="section-titre">Votre espace documentaire</p>',
                 unsafe_allow_html=True)
     st.markdown('<p class="sidebar-note">Retrouvez vos documents et préparez vos exports comptables.</p>',
@@ -1653,6 +1684,7 @@ with st.sidebar:
         key="navigation_page_b",
         label_visibility="collapsed",
         on_change=_nav_b,
+        format_func=_libelle_page,
     )
     st.divider()
 
@@ -2529,6 +2561,9 @@ if page == "📄 Factures PDF" and fichiers:
         f = r["f"]
         if r["illisible"]:
             with st.expander("📄 " + f.name + " — 🔴 illisible", expanded=False):
+                st.download_button("⬇️ PDF original : " + f.name, f.getvalue(),
+                                   file_name=f.name, mime="application/pdf",
+                                   key="dl_" + f.name)
                 if HAS_OCR:
                     st.error("Rien à lire dans ce PDF, même avec l'OCR. "
                              "Photo trop sombre, trop penchée ou mauvaise qualité ?")
@@ -2553,6 +2588,12 @@ if page == "📄 Factures PDF" and fichiers:
             if r["notes"]:
                 for note in r["notes"]:
                     st.info("🧠 **Analyse IA** : " + note)
+
+            # v33 : PDF original accessible directement dans la carte,
+            # a cote de ce que l'IA a lu et des champs a corriger.
+            st.download_button("⬇️ PDF original : " + f.name, f.getvalue(),
+                               file_name=f.name, mime="application/pdf",
+                               key="dl_" + f.name)
 
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
             df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
@@ -2621,8 +2662,8 @@ if page == "📄 Factures PDF" and fichiers:
                 st.session_state["recap"] = db_charger()
                 st.rerun()
 
-            # Diagnostic : texte lu par l'application
-            with st.expander("🔍 Diagnostic — texte lu par l'application"):
+            # v33 : ce que l'IA a lu, texte brut, cote a cote des champs
+            with st.expander("📖 Ce que l'IA a lu (texte brut)"):
                 st.caption("Copie-colle ce texte dans notre conversation si un champ est faux : "
                            "je corrige la règle de lecture.")
                 st.code(r.get("texte", "")[:4000], language="text")
@@ -3315,4 +3356,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 32 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 33 · " + datetime.date.today().strftime("%d/%m/%Y"))
