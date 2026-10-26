@@ -117,7 +117,16 @@ visuel) : toutes les surfaces passent au GRIS FROID CLAIR #E0E0E0
 (cartes, tableaux, metriques, accordeons, bulles de chat, piste de
 progression, item actif sidebar) ; champs de saisie #E9E9E9 ; blocs
 de code #E6E6E6. Ecritures noires, accent violet, fond degrade
-violet inchanges."""
+violet inchanges.
+v41 : VIOLET NUIT (symetrie demandee : le blanc est devenu gris ->
+le violet devient la meme couleur mais EXTREMEMENT sombre) : fond
+en degrade violet nuit #1C1333 -> #2B2050, sidebar #221940. Textes
+poses sur le fond : gris clair #D8D4E8 ; ecritures dans les cartes,
+champs, alertes, blocs de code et bulles de chat : NOIRES (regles
+de securite). Accents de la sidebar passes en lavande lumineuse
+#a78bfa (marque, titres de sections, item actif) pour rester
+lisibles sur le fond sombre ; badges du tableau de bord en tons
+neon clairs. Cartes et champs restent GRIS #E0E0E0/#E9E9E9."""
 
 import re
 import io
@@ -1344,13 +1353,15 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: linear-gradient(160deg, #B8A6EC 0%, #C7B7F0 45%, #D4C6F5 100%);}
+    .stApp {background: linear-gradient(160deg, #1C1333 0%, #241A42 45%, #2B2050 100%);}
     .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
-    .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #1a1a1a !important;}
-    section[data-testid="stSidebar"] {background: #C7B7F0; border-right: 1px solid #d9d2ee;}
-    section[data-testid="stSidebar"] * {color: #2b2b2b !important;}
+    /* v41 : fond violet NUIT — les textes poses sur le fond deviennent
+    clairs ; les ecritures dans les cartes/champs restent NOIRES. */
+    .stApp, .stApp p, .stApp span, .stApp label, .stApp li {color: #D8D4E8 !important;}
+    [data-testid="stCaptionContainer"] {color: #D8D4E8 !important;}
+    section[data-testid="stSidebar"] {background: #221940; border-right: 1px solid #443163;}
+    section[data-testid="stSidebar"] * {color: #cfc9e0 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
         background: #E0E0E0; color: #141414;
@@ -1453,6 +1464,30 @@ st.markdown("""
     border: 1px solid #d5d1e3 !important; border-radius: 8px;
 }
 .stApp input::placeholder {color: #8a8494 !important;}
+
+/* ---- v41 : lisibilite sur fond violet nuit ---- */
+/* boutons et bulles de chat gardent un texte NOIR sur fond clair */
+.stButton > button, .stButton > button *,
+.stDownloadButton > button, .stDownloadButton > button * {
+    color: #141414 !important;
+}
+.stButton > button[kind="primary"], .stButton > button[kind="primary"] * {
+    color: #FFFFFF !important;
+}
+section[data-testid="stChatMessage"] p,
+section[data-testid="stChatMessage"] li,
+section[data-testid="stChatMessage"] span {
+    color: #2b2b2b !important;
+}
+.stTabs [data-baseweb="tab"] {color: #cfc9e0 !important; font-weight: 600;}
+.stTabs [data-baseweb="tab"]:hover {color: #FFFFFF !important;}
+.stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
+/* badges clairs sur fond sombre */
+.badge.apayer   {background: rgba(255,152,0,.16); color: #ffb84d; border-color: rgba(255,184,77,.5);}
+.badge.partielle{background: rgba(156,120,255,.16); color: #b39dff; border-color: rgba(179,157,255,.5);}
+.badge.averif   {background: rgba(167,139,250,.16); color: #a78bfa; border-color: rgba(167,139,250,.5);}
+.badge.payee    {background: rgba(87,230,168,.14); color: #57e6a8; border-color: rgba(87,230,168,.5);}
+.badge.retard   {background: rgba(255,125,144,.14); color: #ff7d90; border-color: rgba(255,125,144,.5);}
 
 /* ---- v39 : plus AUCUNE surface sombre, blancs assombris (confort
      visuel pour un usage prolonge : 6 h/jour sur cet ecran) ---- */
