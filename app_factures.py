@@ -1284,7 +1284,7 @@ st.markdown("""
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
     [data-testid="stCaptionContainer"] {color: #cfcfcf !important;}
-    section[data-testid="stSidebar"] {background: #121212; border-right: 1px solid #333333;}
+    section[data-testid="stSidebar"] {background: #0A0A0A; border-right: 1px solid #333333;}
     section[data-testid="stSidebar"] * {color: #b0b0b0 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
@@ -1362,16 +1362,36 @@ st.markdown("""
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #8f8f8f; font-weight: 600; font-size: .72rem;
-    letter-spacing: 1.2px; text-transform: uppercase;
+    color: #FFD700 !important; font-weight: 700; font-size: .72rem;
+    letter-spacing: 1.4px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
     border-bottom: 1px solid #333333; padding-bottom: .3rem;
 }
-div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
-section[data-testid="stSidebar"] div[role="radiogroup"] label {
-    padding: .28rem .5rem; border-radius: 9px; transition: background .15s;
+.sidebar-note {
+    color: #8f8f8f !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #232323;}
+.sidebar-note strong {color: #FFD700 !important;}
+div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
+/* ---- v32 : menu de la sidebar, style maquette ---- */
+section[data-testid="stSidebar"] div[role="radiogroup"] label {
+    padding: .42rem .6rem; border-radius: 8px; font-weight: 500;
+    letter-spacing: .3px; border-left: 3px solid transparent;
+    transition: background .15s;
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1E1E1E;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background: #1E1E1E; border-left: 3px solid #FFD700;
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
+section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked),
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
+    color: #FFD700 !important; font-weight: 600;
+}
+/* pastille ronde masquee : rend le menu aussi epure que la maquette */
+section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
+section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
 
 
@@ -1619,7 +1639,13 @@ with st.sidebar:
         label_visibility="collapsed",
         on_change=_nav_a,
     )
+    # v32 : compteur style maquette « Mes factures (03) »
+    st.markdown('<p class="sidebar-note">Mes factures · <strong>' +
+                str(nb_factures).zfill(2) + '</strong> document(s) enregistré(s)</p>',
+                unsafe_allow_html=True)
     st.markdown('<p class="section-titre">Votre espace documentaire</p>',
+                unsafe_allow_html=True)
+    st.markdown('<p class="sidebar-note">Retrouvez vos documents et préparez vos exports comptables.</p>',
                 unsafe_allow_html=True)
     st.radio(
         "Choisir une page (suite)",
