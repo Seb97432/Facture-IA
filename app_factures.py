@@ -1424,8 +1424,8 @@ st.markdown("""
     letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
-    /* v37 : champs de saisie (email, mot de passe...) en gris tres clair */
-    background-color: #f3f2f6 !important; border-color: #d5d1e3 !important;
+    /* v37.1 : champs de saisie (email, mot de passe...) en BLANC */
+    background-color: #FFFFFF !important; border-color: #d5d1e3 !important;
     border-radius: 8px;
 }
 .stApp div[data-baseweb="input"] input, .stApp textarea {color: #141414 !important;}
