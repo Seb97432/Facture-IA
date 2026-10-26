@@ -150,7 +150,18 @@ accordeons/bulles #2A2145, cases et boutons #322652, bordures
 sombre a texte clair. Les alertes Streamlit gardent leur texte
 fonce (fond clair d'origine). RAPPEL DEPLOIEMENT : rien ne change sur
 le site tant que le code n'est pas copie dans app_factures.py et
-pousse sur GitHub."""
+pousse sur GitHub.
+v46 : LIMITE PORTEE A 1000 FACTURES (a la demande de l'auteur) :
+LIMITE_FACTURES = 1000, policy SQL renommee limite_1000_factures
+(< 1000), guide de migration fourni (drop de l'ancienne policy 500),
+textes d'aide mis a jour. COTE SERVEUR : la nouvelle policy doit
+etre installee dans Supabase (SQL Editor), sinon le serveur refuse
+toujours au-dela de 500.
+OCR RENFORCE : petites images AGRANDIES x2 (LANCZOS) avant lecture,
+nettete UnsharpMask appliquee, deux passes de lecture EN PLUS
+(600 dpi pour les tout petits caracteres, et une passe photo sans
+binarisation). Fusion multi-lectures et validation humaine
+inchangees."""
 
 import re
 import io
@@ -175,7 +186,7 @@ import pandas as pd
 # --- OCR (Tesseract) : facultatif, installe si present ---
 try:
     import pytesseract
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps, ImageFilter
     CHEMIN_TESSERACT = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     if os.path.exists(CHEMIN_TESSERACT):
         pytesseract.pytesseract.tesseract_cmd = CHEMIN_TESSERACT
@@ -220,12 +231,22 @@ def _redresser_image(image):
 def _preparer_image(png_bytes, binariser):
     """Nettoie l'image avant l'OCR : redressement si le scan est penché,
     niveaux de gris + contraste automatique, et si demandé binarisation
-    noir/blanc (efficace sur les scans ternes)."""
+    noir/blanc (efficace sur les scans ternes).
+    v46 : + agrandissement des petites images (photos de téléphone),
+    + netteté renforcée : Tesseract lit beaucoup mieux du texte fin."""
     image = Image.open(io.BytesIO(png_bytes))
     try:
         image = _redresser_image(image)
         image = image.convert("L")
+        # v46 : une photo de facture en basse résolution est AGRANDIE x2 :
+        # sans ça, les petits caractères sont illisibles pour l'OCR.
+        if image.width < 1600:
+            image = image.resize((image.width * 2, image.height * 2),
+                                 Image.LANCZOS)
         image = ImageOps.autocontrast(image)
+        # v46 : netteté (masque flou) — redonne du mordant aux bords de
+        # lettres, décisif sur les scans un peu flous.
+        image = image.filter(ImageFilter.UnsharpMask(radius=2, percent=120))
         if binariser:
             image = image.point(lambda x: 255 if x > 160 else 0)
     except Exception:
@@ -253,8 +274,12 @@ def _lire_page_ocr(page):
     moins bonne (l'IA les utilisera toutes : le HT peut être bien lu
     dans une lecture et le TTC dans une autre)."""
     essais = []
+    # v46 : deux passes EN PLUS — 600 dpi pour les tout petits caractères,
+    # et une passe "photo de téléphone" en niveaux de gris purs (sans
+    # binarisation, qui abîme parfois les photos).
     for dpi, binariser, psm in ((300, False, None), (300, True, 6),
-                                (400, True, 4), (500, True, 6)):
+                                (400, True, 4), (500, True, 6),
+                                (600, True, 4), (400, False, 6)):
         pix = page.get_pixmap(dpi=dpi)
         image = _preparer_image(pix.tobytes("png"), binariser)
         txt = _ocr_image(image, psm)
@@ -1093,16 +1118,16 @@ def _cle(ligne):
             str(ligne.get("Fournisseur", "")).lower().strip())
 
 
-# v28 : LIMITE DE 500 FACTURES PAR UTILISATEUR.
+# v28 puis v46 : LIMITE DE FACTURES PAR UTILISATEUR (1000 depuis la v46).
 # Une "facture" = UNE ligne validee du recapitulatif (fournisseur + numero).
 # Le nombre de pages ou de fichiers PDF ne compte PAS : un PDF de 3 pages
 # = 1 facture. Garde cote client ici + policy SQL cote serveur (voir le
 # mode d'emploi dans la sidebar) : meme une interface modifiee est bloquee.
-LIMITE_FACTURES = 500
+LIMITE_FACTURES = 1000
 
 
 def limite_atteinte(lignes=None):
-    """True si l'utilisateur a deja ses 500 factures."""
+    """True si l utilisateur a deja atteint sa limite de factures."""
     if lignes is None:
         lignes = st.session_state.get("recap") or []
     return len(lignes) >= LIMITE_FACTURES
@@ -1257,7 +1282,7 @@ def db_charger():
 def db_ajouter(ligne):
     """Ajoute une facture. Contrat de retour (v31, corrige le retour
     trompeur de la v30) :
-      - False : limite de 500 atteinte, OU ECHEC COMPLET (rien n'a ete
+      - False : limite de 1000 atteinte, OU ECHEC COMPLET (rien n'a ete
         ecrit, ni en local ni en ligne) -> l'appelant DOIT le signaler.
       - True  : au moins une sauvegarde a reussi.
         En cas d'echec du cloud alors que le local a reussi, un
@@ -1631,7 +1656,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 45")
+    st.caption("Version 46")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -2016,7 +2041,13 @@ tesseract-ocr-fra""", language="text")
         Email Templates, onglet « Confirm signup », vérifie que le message
         contient {{ .Token }} (le code) — c'est le cas par défaut.
 
-        3. Dans SQL Editor, colle ce code et clique sur Run :""")
+        3. Dans SQL Editor, colle ce code et clique sur Run :
+
+        Si tu avais déjà installé l'ancienne limite de 500 (v28),
+        exécute d'abord CETTE mise à jour (elle retire l'ancienne règle) :
+        """)
+        st.code("""drop policy if exists "limite_500_factures" on factures;""",
+                language="sql")
         st.code("""create table if not exists factures (
   id bigint generated by default as identity primary key,
   utilisateur text not null,
@@ -2033,16 +2064,16 @@ create policy "chacun les siennes" on factures
   using (auth.uid()::text = utilisateur)
   with check (auth.uid()::text = utilisateur);
 
--- v28 : LIMITE DE 500 FACTURES PAR COMPTE, appliquee COTE SERVEUR.
--- Une insertion au-dela de 500 est refusee par Supabase lui-meme :
+-- v28 puis v46 : LIMITE DE 1000 FACTURES PAR COMPTE, appliquee COTE SERVEUR.
+-- Une insertion au-dela de 1000 est refusee par Supabase lui-meme :
 -- modifier l'application ne suffit pas a contourner la limite.
-drop policy if exists "limite_500_factures" on factures;
+drop policy if exists "limite_1000_factures" on factures;
 
-create policy "limite_500_factures" on factures
+create policy "limite_1000_factures" on factures
   for insert to authenticated
   with check (
     (select count(*) from factures f
-     where f.utilisateur = auth.uid()::text) < 500
+     where f.utilisateur = auth.uid()::text) < 1000
   );
 
 -- v28 : MEMOIRE DE L'ASSISTANT (table 'conversations', protegee par RLS :
@@ -2686,7 +2717,7 @@ if page == "📄 Factures PDF" and fichiers:
                 if doublon:
                     passees.append(r["f"].name + " (doublon)")
                     continue
-                if limite_atteinte(recap_actuel):   # v28 : 500 max
+                if limite_atteinte(recap_actuel):   # v46 : 1000 max
                     bloquees += 1
                     continue
                 if not db_ajouter(ligne):
@@ -3317,9 +3348,9 @@ if page == "❓ Aide":
         - **Aucun PDF** n'est jamais envoyé à l'IA : uniquement les résumés
         (fournisseur, n°, dates, montants, paiements).""")
 
-    with st.expander("🗂️ La limite de 500 factures"):
+    with st.expander("🗂️ La limite de 1000 factures"):
         st.markdown("""
-        - Chaque compte peut enregistrer jusqu'à **500 factures**. Une facture =
+        - Chaque compte peut enregistrer jusqu'à **1000 factures**. Une facture =
         **une ligne validée du récapitulatif** (un PDF de 3 pages compte pour
         1 facture ; un fichier renommé 10 fois compte aussi pour 1).
         - Le compteur dans le menu de gauche affiche toujours ta capacité
@@ -3506,4 +3537,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 45 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 46 · " + datetime.date.today().strftime("%d/%m/%Y"))
