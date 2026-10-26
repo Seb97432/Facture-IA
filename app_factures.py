@@ -135,7 +135,11 @@ y serait illisible).
 v43 : CASES UNIFIEES : toutes les cases encore blanches ou plus
 claires (champs de saisie, zone de depot de fichiers, blocs de
 code) passent en UN SEUL gris harmonieux #DCDCE1, ton qui se marie
-avec les cartes grises #E0E0E0 et le fond violet nuit."""
+avec les cartes grises #E0E0E0 et le fond violet nuit.
+v44 : filet ULTIME sur les cases : tout <input>/<textarea>/<select>
+de l'application = fond gris #DCDCE1 + texte NOIR force (color,
+-webkit-text-fill-color, caret-color) — corrige le texte gris pale
+illisible signale dans les champs email/mot de passe."""
 
 import re
 import io
@@ -1466,11 +1470,18 @@ st.markdown("""
     background-color: #DCDCE1 !important; border-color: #d5d1e3 !important;
     border-radius: 8px;
 }
-/* v38 : filet de securite — cible les <input> eux-memes quelle que
-   soit la structure interne de la version de Streamlit */
-.stApp input, .stApp textarea {
-    background-color: #DCDCE1 !important; color: #141414 !important;
-    border: 1px solid #d5d1e3 !important; border-radius: 8px;
+/* v44 : filet ULTIME — n'importe quelle case de saisie, quelle que
+   soit sa structure interne : fond gris #DCDCE1, texte NOIR
+   (color + webkit-text-fill-color pour navigateurs WebKit). */
+.stApp input, .stApp input[type="text"], .stApp input[type="password"],
+.stApp input[type="email"], .stApp input[type="number"],
+.stApp textarea, .stApp select {
+    background-color: #DCDCE1 !important;
+    color: #141414 !important;
+    -webkit-text-fill-color: #141414 !important;
+    caret-color: #141414 !important;
+    border: 1px solid #d5d1e3 !important;
+    border-radius: 8px;
 }
 .stApp input::placeholder {color: #8a8494 !important;}
 
@@ -1609,7 +1620,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 43")
+    st.caption("Version 44")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3484,4 +3495,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 43 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 44 · " + datetime.date.today().strftime("%d/%m/%Y"))
