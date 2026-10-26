@@ -31,7 +31,7 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #EDE7FB, cartes anthracite #FFFFFF, accent or #7c5cd6
+fond quasi noir #E2D9FB, cartes anthracite #FFFFFF, accent or #7c5cd6
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
@@ -47,7 +47,7 @@ avertissement inline + rappel disque ephemere Streamlit Cloud) ;
 (4) messages d'erreur en sidebar pour erreur_sqlite / erreur_pdf /
 avert_persist, avec bouton d'acquittement. Aucune signature d'appel
 cassee : les retours sont additives.
-v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #EDE7FB, cartes #FFFFFF,
+v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #E2D9FB, cartes #FFFFFF,
 bordures #333, or #7c5cd6) + fil d'Ariane dynamique « Espace de
 travail / page » + badges de statut arrondis sur le tableau de bord
 + sidebar renommee (« Espace de travail », « Votre espace
@@ -70,7 +70,7 @@ couleurs precedentes ne se mariaient pas). Tout le theme passe en
 violets profonds qui se fondent : fond en DEGRADE (150b26 -> 241440),
 cartes #FFFFFF, bordures #d9d2ee, accents LAVANDE #7c5cd6 (bouton
 principal, section-titres, marque, item actif, barre de progression),
-texte #3d3552, stats en neons assortis (menthe #2e9e6f, peche #d18a2a,
+texte #141414, stats en neons assortis (menthe #2e9e6f, peche #d18a2a,
 rose #e05c74), lueur douce sur le titre. AUCUNE logique modifiee :
 uniquement des valeurs CSS.
 v35 : ECRITURE NORMALE & SECTIONS EPUREES (a la demande de l'auteur,
@@ -87,14 +87,19 @@ messages fonctionnels (succes, erreurs, avertissements) gardent leurs
 emojis d'alerte : ce sont des signaux, pas de la decoration.
 v36 : THEME LAVANDE CLAIR & BLANC (a la demande de l'auteur, sur
 exemple visuel de degrade lavande pale) : le violet profond laisse
-place a un fond en DEGRADE lavande clair (#E6E6FA -> #F0E6FF),
+place a un fond en DEGRADE lavande clair (#D6CCF5 -> #EDE3FF),
 cartes/accordeons/champs BLANCS avec ombre violette tres douce,
 bordures lavande #d9d2ee, accent violet #7c5cd6 (bouton principal
 violet a texte blanc, item actif, marque, titres de sections, barre
-de progression), textes gris-violet #3d3552/#4f4666, stats foncees
+de progression), textes gris-violet #141414/#1a1a1a, stats foncees
 pour rester lisibles sur blanc (vert #2e9e6f, peche #d18a2a, rose
 #e05c74). Lueur du titre retiree. AUCUNE logique modifiee :
-uniquement des valeurs CSS."""
+uniquement des valeurs CSS.
+v37 : AJUSTEMENTS DEMANDES : fond UN PEU PLUS VIOLET (degrade
+#D6CCF5 -> #EDE3FF, sidebar #E2D9FB), TOUTES les ecritures en NOIR
+(#141414 / #1a1a1a, textes secondaires #2b2b2b et #555555), champs de
+saisie (email, mot de passe...) en GRIS TRES CLAIR #f3f2f6 bordure
+#d5d1e3. Cartes toujours blanches, accent violet #7c5cd6 inchange."""
 
 import re
 import io
@@ -1321,24 +1326,24 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: linear-gradient(160deg, #E6E6FA 0%, #EDE7FB 45%, #F0E6FF 100%);}
+    .stApp {background: linear-gradient(160deg, #D6CCF5 0%, #E2D9FB 45%, #EDE3FF 100%);}
     .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #4f4666 !important;}
-    section[data-testid="stSidebar"] {background: #EDE7FB; border-right: 1px solid #d9d2ee;}
-    section[data-testid="stSidebar"] * {color: #5a5075 !important;}
+    [data-testid="stCaptionContainer"] {color: #1a1a1a !important;}
+    section[data-testid="stSidebar"] {background: #E2D9FB; border-right: 1px solid #d9d2ee;}
+    section[data-testid="stSidebar"] * {color: #2b2b2b !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #FFFFFF; color: #3d3552;
+        background: #FFFFFF; color: #141414;
         border: 1px solid #d9d2ee; border-left: 3px solid #7c5cd6;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #3d3552; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
-    .hero p.breadcrumb {color: #8a7fa8; margin: 0 0 .25rem 0; font-size: .78rem;
+    .hero h1 {color: #141414; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
+    .hero p.breadcrumb {color: #555555; margin: 0 0 .25rem 0; font-size: .78rem;
         text-transform: uppercase; letter-spacing: 1px;}
-    .hero p {color: #8a7fa8; margin: .35rem 0 0 0; font-size: .95rem;}
+    .hero p {color: #555555; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
         display: inline-block; background: #FFFFFF; color: #7c5cd6; border: 1px solid #c9c2e8;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
@@ -1348,17 +1353,17 @@ st.markdown("""
         border-radius: 12px; border: 1px solid #d9d2ee; background: #FFFFFF;
         overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #443c5e !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #5a5075 !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #1a1a1a !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #2b2b2b !important;}
     div[data-testid="stMetric"] {
         background: #FFFFFF; border: 1px solid #d9d2ee; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #8a7fa8 !important;}
-    div[data-testid="stMetricValue"] {color: #3d3552 !important;}
+    div[data-testid="stMetricLabel"] p {color: #555555 !important;}
+    div[data-testid="stMetricValue"] {color: #141414 !important;}
     .stButton > button {
-        background: #ece4fb; color: #443c5e; border: 1px solid #c9c2e8; border-radius: 8px;
+        background: #ece4fb; color: #1a1a1a; border: 1px solid #c9c2e8; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #7c5cd6; color: #3d3552;}
+    .stButton > button:hover {border-color: #7c5cd6; color: #141414;}
     .stButton > button[kind="primary"] {
         /* v36 : bouton principal VIOLET, texte blanc */
         background: #7c5cd6; color: #FFFFFF; border: none; font-weight: 700;
@@ -1367,14 +1372,14 @@ st.markdown("""
     .stDownloadButton > button {
         background: #ece4fb; color: #7c5cd6; border: 1px solid #c9c2e8; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #7c5cd6; color: #3d3552;}
+    .stDownloadButton > button:hover {border-color: #7c5cd6; color: #141414;}
     div[data-testid="stFileUploader"] {
         border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #f5f0ff;
     }
     div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #FFFFFF;}
-    .stTabs [data-baseweb="tab"] {color: #8a7fa8; font-weight: 600;}
+    .stTabs [data-baseweb="tab"] {color: #555555; font-weight: 600;}
     .stTabs [data-baseweb="tab-highlight"] {background: #7c5cd6;}
-    .stTabs [data-baseweb="tab"]:hover {color: #4f4666;}
+    .stTabs [data-baseweb="tab"]:hover {color: #1a1a1a;}
     hr {border-color: #d9d2ee;}
 
 /* ---- v21 : cartes KPI sobres ---- */
@@ -1382,9 +1387,9 @@ st.markdown("""
     background: #FFFFFF; border: 1px solid #d9d2ee; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #8a7fa8; font-size: .78rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #555555; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #3d3552; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi .kpi-val {color: #141414; font-size: 1.35rem; font-weight: 700;}
 .carte-kpi.vert {border-color: #bfe3d2;}   .carte-kpi.vert .kpi-val {color: #2e9e6f;}
 .carte-kpi.orange {border-color: #f0dcbc;} .carte-kpi.orange .kpi-val {color: #d18a2a;}
 .carte-kpi.rouge {border-color: #f3ccd3;}  .carte-kpi.rouge .kpi-val {color: #e05c74;}
@@ -1410,7 +1415,7 @@ st.markdown("""
     border-bottom: 1px solid #d9d2ee; padding-bottom: .3rem;
 }
 .sidebar-note {
-    color: #8a7fa8 !important; font-size: .74rem; margin: .3rem 0 0 0;
+    color: #555555 !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
 .sidebar-note strong {color: #7c5cd6 !important;}
 
@@ -1419,10 +1424,11 @@ st.markdown("""
     letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
-    background-color: #FFFFFF !important; border-color: #c9c2e8 !important;
+    /* v37 : champs de saisie (email, mot de passe...) en gris tres clair */
+    background-color: #f3f2f6 !important; border-color: #d5d1e3 !important;
     border-radius: 8px;
 }
-.stApp div[data-baseweb="input"] input, .stApp textarea {color: #3d3552 !important;}
+.stApp div[data-baseweb="input"] input, .stApp textarea {color: #141414 !important;}
 [data-testid="stProgress"] > div {background: #FFFFFF; border-radius: 999px;}
 [data-testid="stProgress"] > div > div {background: #7c5cd6;}
 div[data-testid="stDataFrame"] {border: 1px solid #d9d2ee; border-radius: 12px;}
@@ -1456,10 +1462,10 @@ section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
 /* ---- v35 : écriture normale, épurée (style « Contenu ») ---- */
 div[data-testid="stExpander"] summary span {
-    color: #443c5e !important; font-weight: 500; font-size: .87rem;
+    color: #1a1a1a !important; font-weight: 500; font-size: .87rem;
 }
 div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
-    color: #5a5075 !important; font-size: .87rem;
+    color: #2b2b2b !important; font-size: .87rem;
     line-height: 1.6; font-weight: 400;
 }
 div[data-testid="stExpander"] strong {
@@ -1476,7 +1482,7 @@ section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover spa
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #EDE7FB;}
+    section[data-testid="stSidebar"] {background: #E2D9FB;}
 }
 
 </style>
@@ -1513,7 +1519,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 36")
+    st.caption("Version 37")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3388,4 +3394,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 36 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 37 · " + datetime.date.today().strftime("%d/%m/%Y"))
