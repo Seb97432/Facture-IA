@@ -31,7 +31,7 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #E2D9FB, cartes anthracite #FFFFFF, accent or #7c5cd6
+fond quasi noir #C7B7F0, cartes anthracite #FFFFFF, accent or #7c5cd6
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
@@ -47,7 +47,7 @@ avertissement inline + rappel disque ephemere Streamlit Cloud) ;
 (4) messages d'erreur en sidebar pour erreur_sqlite / erreur_pdf /
 avert_persist, avec bouton d'acquittement. Aucune signature d'appel
 cassee : les retours sont additives.
-v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #E2D9FB, cartes #FFFFFF,
+v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #C7B7F0, cartes #FFFFFF,
 bordures #333, or #7c5cd6) + fil d'Ariane dynamique « Espace de
 travail / page » + badges de statut arrondis sur le tableau de bord
 + sidebar renommee (« Espace de travail », « Votre espace
@@ -87,7 +87,7 @@ messages fonctionnels (succes, erreurs, avertissements) gardent leurs
 emojis d'alerte : ce sont des signaux, pas de la decoration.
 v36 : THEME LAVANDE CLAIR & BLANC (a la demande de l'auteur, sur
 exemple visuel de degrade lavande pale) : le violet profond laisse
-place a un fond en DEGRADE lavande clair (#D6CCF5 -> #EDE3FF),
+place a un fond en DEGRADE lavande clair (#B8A6EC -> #D4C6F5),
 cartes/accordeons/champs BLANCS avec ombre violette tres douce,
 bordures lavande #d9d2ee, accent violet #7c5cd6 (bouton principal
 violet a texte blanc, item actif, marque, titres de sections, barre
@@ -96,10 +96,15 @@ pour rester lisibles sur blanc (vert #2e9e6f, peche #d18a2a, rose
 #e05c74). Lueur du titre retiree. AUCUNE logique modifiee :
 uniquement des valeurs CSS.
 v37 : AJUSTEMENTS DEMANDES : fond UN PEU PLUS VIOLET (degrade
-#D6CCF5 -> #EDE3FF, sidebar #E2D9FB), TOUTES les ecritures en NOIR
+#B8A6EC -> #D4C6F5, sidebar #C7B7F0), TOUTES les ecritures en NOIR
 (#141414 / #1a1a1a, textes secondaires #2b2b2b et #555555), champs de
 saisie (email, mot de passe...) en GRIS TRES CLAIR #f3f2f6 bordure
-#d5d1e3. Cartes toujours blanches, accent violet #7c5cd6 inchange."""
+#d5d1e3. Cartes toujours blanches, accent violet #7c5cd6 inchange.
+v38 : (1) cases email/mot de passe FORCES en blanc par un selecteur
+direct sur les <input> eux-memes (le CSS precedent ne matchait pas
+la structure interne de la version Streamlit) ; (2) fond PLUS VIOLET
+et un peu plus sombre : degrade #B8A6EC -> #C7B7F0 -> #D4C6F5,
+sidebar #C7B7F0."""
 
 import re
 import io
@@ -1326,12 +1331,12 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: linear-gradient(160deg, #D6CCF5 0%, #E2D9FB 45%, #EDE3FF 100%);}
+    .stApp {background: linear-gradient(160deg, #B8A6EC 0%, #C7B7F0 45%, #D4C6F5 100%);}
     .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
     [data-testid="stCaptionContainer"] {color: #1a1a1a !important;}
-    section[data-testid="stSidebar"] {background: #E2D9FB; border-right: 1px solid #d9d2ee;}
+    section[data-testid="stSidebar"] {background: #C7B7F0; border-right: 1px solid #d9d2ee;}
     section[data-testid="stSidebar"] * {color: #2b2b2b !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
@@ -1424,10 +1429,17 @@ st.markdown("""
     letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
-    /* v37.1 : champs de saisie (email, mot de passe...) en BLANC */
+    /* v38 : champs de saisie (email, mot de passe...) FORCES en blanc */
     background-color: #FFFFFF !important; border-color: #d5d1e3 !important;
     border-radius: 8px;
 }
+/* v38 : filet de securite — cible les <input> eux-memes quelle que
+   soit la structure interne de la version de Streamlit */
+.stApp input, .stApp textarea {
+    background-color: #FFFFFF !important; color: #141414 !important;
+    border: 1px solid #d5d1e3 !important; border-radius: 8px;
+}
+.stApp input::placeholder {color: #8a8494 !important;}
 .stApp div[data-baseweb="input"] input, .stApp textarea {color: #141414 !important;}
 [data-testid="stProgress"] > div {background: #FFFFFF; border-radius: 999px;}
 [data-testid="stProgress"] > div > div {background: #7c5cd6;}
@@ -1482,7 +1494,7 @@ section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover spa
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #E2D9FB;}
+    section[data-testid="stSidebar"] {background: #C7B7F0;}
 }
 
 </style>
@@ -1519,7 +1531,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 37")
+    st.caption("Version 38")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3394,4 +3406,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 37 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 38 · " + datetime.date.today().strftime("%d/%m/%Y"))
