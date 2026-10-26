@@ -31,7 +31,7 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #1a0d2e, cartes anthracite #241638, accent or #a78bfa
+fond quasi noir #EDE7FB, cartes anthracite #FFFFFF, accent or #7c5cd6
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
@@ -47,8 +47,8 @@ avertissement inline + rappel disque ephemere Streamlit Cloud) ;
 (4) messages d'erreur en sidebar pour erreur_sqlite / erreur_pdf /
 avert_persist, avec bouton d'acquittement. Aucune signature d'appel
 cassee : les retours sont additives.
-v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #1a0d2e, cartes #241638,
-bordures #333, or #a78bfa) + fil d'Ariane dynamique « Espace de
+v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #EDE7FB, cartes #FFFFFF,
+bordures #333, or #7c5cd6) + fil d'Ariane dynamique « Espace de
 travail / page » + badges de statut arrondis sur le tableau de bord
 + sidebar renommee (« Espace de travail », « Votre espace
 documentaire ») + OCR : alerte si echeance anterieure a la date de
@@ -68,10 +68,10 @@ tableaux bordes. Aucune logique de calcul modifiee.
 v34 : PALETTE SYNTHWAVE HARMONIEUSE (a la demande de l'auteur : les
 couleurs precedentes ne se mariaient pas). Tout le theme passe en
 violets profonds qui se fondent : fond en DEGRADE (150b26 -> 241440),
-cartes #241638, bordures #3d2a5c, accents LAVANDE #a78bfa (bouton
+cartes #FFFFFF, bordures #d9d2ee, accents LAVANDE #7c5cd6 (bouton
 principal, section-titres, marque, item actif, barre de progression),
-texte #ece6f5, stats en neons assortis (menthe #57e6a8, peche #ffb84d,
-rose #ff7d90), lueur douce sur le titre. AUCUNE logique modifiee :
+texte #3d3552, stats en neons assortis (menthe #2e9e6f, peche #d18a2a,
+rose #e05c74), lueur douce sur le titre. AUCUNE logique modifiee :
 uniquement des valeurs CSS.
 v35 : ECRITURE NORMALE & SECTIONS EPUREES (a la demande de l'auteur,
 sur exemples visuels) : toute la documentation de la sidebar (essais,
@@ -84,7 +84,17 @@ confidentialité », « Confidentialité & sécurité des données »,
 « Comptes & sauvegarde en ligne — guide pas à pas »). CSS : texte des
 accordeons en graisse normale, taille 0.87rem, interligne 1.6. Les
 messages fonctionnels (succes, erreurs, avertissements) gardent leurs
-emojis d'alerte : ce sont des signaux, pas de la decoration."""
+emojis d'alerte : ce sont des signaux, pas de la decoration.
+v36 : THEME LAVANDE CLAIR & BLANC (a la demande de l'auteur, sur
+exemple visuel de degrade lavande pale) : le violet profond laisse
+place a un fond en DEGRADE lavande clair (#E6E6FA -> #F0E6FF),
+cartes/accordeons/champs BLANCS avec ombre violette tres douce,
+bordures lavande #d9d2ee, accent violet #7c5cd6 (bouton principal
+violet a texte blanc, item actif, marque, titres de sections, barre
+de progression), textes gris-violet #3d3552/#4f4666, stats foncees
+pour rester lisibles sur blanc (vert #2e9e6f, peche #d18a2a, rose
+#e05c74). Lueur du titre retiree. AUCUNE logique modifiee :
+uniquement des valeurs CSS."""
 
 import re
 import io
@@ -1311,75 +1321,74 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: linear-gradient(160deg, #150b26 0%, #1a0d2e 45%, #241440 100%);}
+    .stApp {background: linear-gradient(160deg, #E6E6FA 0%, #EDE7FB 45%, #F0E6FF 100%);}
     .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #cfc4e8 !important;}
-    section[data-testid="stSidebar"] {background: #1a0d2e; border-right: 1px solid #3d2a5c;}
-    section[data-testid="stSidebar"] * {color: #b3a6d4 !important;}
+    [data-testid="stCaptionContainer"] {color: #4f4666 !important;}
+    section[data-testid="stSidebar"] {background: #EDE7FB; border-right: 1px solid #d9d2ee;}
+    section[data-testid="stSidebar"] * {color: #5a5075 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #241638; color: #ece6f5;
-        border: 1px solid #3d2a5c; border-left: 3px solid #a78bfa;
+        background: #FFFFFF; color: #3d3552;
+        border: 1px solid #d9d2ee; border-left: 3px solid #7c5cd6;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #ece6f5; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;
-        text-shadow: 0 0 22px rgba(167,139,250,.45);}
-    .hero p.breadcrumb {color: #9d8fc0; margin: 0 0 .25rem 0; font-size: .78rem;
+    .hero h1 {color: #3d3552; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
+    .hero p.breadcrumb {color: #8a7fa8; margin: 0 0 .25rem 0; font-size: .78rem;
         text-transform: uppercase; letter-spacing: 1px;}
-    .hero p {color: #9d8fc0; margin: .35rem 0 0 0; font-size: .95rem;}
+    .hero p {color: #8a7fa8; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #1f1233; color: #a78bfa; border: 1px solid #46306b;
+        display: inline-block; background: #FFFFFF; color: #7c5cd6; border: 1px solid #c9c2e8;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #3d2a5c; background: #1f1233;
+        border-radius: 12px; border: 1px solid #d9d2ee; background: #FFFFFF;
         overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d8cef0 !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b3a6d4 !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #443c5e !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #5a5075 !important;}
     div[data-testid="stMetric"] {
-        background: #1f1233; border: 1px solid #3d2a5c; border-radius: 12px; padding: .9rem;
+        background: #FFFFFF; border: 1px solid #d9d2ee; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #9d8fc0 !important;}
-    div[data-testid="stMetricValue"] {color: #ece6f5 !important;}
+    div[data-testid="stMetricLabel"] p {color: #8a7fa8 !important;}
+    div[data-testid="stMetricValue"] {color: #3d3552 !important;}
     .stButton > button {
-        background: #2c1b45; color: #d8cef0; border: 1px solid #46306b; border-radius: 8px;
+        background: #ece4fb; color: #443c5e; border: 1px solid #c9c2e8; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #a78bfa; color: #fff;}
+    .stButton > button:hover {border-color: #7c5cd6; color: #3d3552;}
     .stButton > button[kind="primary"] {
         /* v36 : bouton principal VIOLET, texte blanc */
-        background: #a78bfa; color: #1c1033; border: none; font-weight: 700;
+        background: #7c5cd6; color: #FFFFFF; border: none; font-weight: 700;
     }
-    .stButton > button[kind="primary"]:hover {background: #b899ff; color: #1c1033;}
+    .stButton > button[kind="primary"]:hover {background: #9171e8; color: #FFFFFF;}
     .stDownloadButton > button {
-        background: #2c1b45; color: #a78bfa; border: 1px solid #46306b; border-radius: 8px;
+        background: #ece4fb; color: #7c5cd6; border: 1px solid #c9c2e8; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #a78bfa; color: #fff;}
+    .stDownloadButton > button:hover {border-color: #7c5cd6; color: #3d3552;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #5b4392; border-radius: 12px; padding: .7rem; background: #170d28;
+        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #f5f0ff;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #1f1233;}
-    .stTabs [data-baseweb="tab"] {color: #9d8fc0; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
-    .stTabs [data-baseweb="tab"]:hover {color: #cfc4e8;}
-    hr {border-color: #3d2a5c;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #FFFFFF;}
+    .stTabs [data-baseweb="tab"] {color: #8a7fa8; font-weight: 600;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #7c5cd6;}
+    .stTabs [data-baseweb="tab"]:hover {color: #4f4666;}
+    hr {border-color: #d9d2ee;}
 
 /* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #1f1233; border: 1px solid #3d2a5c; border-radius: 12px;
+    background: #FFFFFF; border: 1px solid #d9d2ee; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #9d8fc0; font-size: .78rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #8a7fa8; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #ece6f5; font-size: 1.35rem; font-weight: 700;}
-.carte-kpi.vert {border-color: #2a5c46;}   .carte-kpi.vert .kpi-val {color: #57e6a8;}
-.carte-kpi.orange {border-color: #5c4526;} .carte-kpi.orange .kpi-val {color: #ffb84d;}
-.carte-kpi.rouge {border-color: #5c2a2a;}  .carte-kpi.rouge .kpi-val {color: #ff7d90;}
-.carte-kpi.bleu {border-color: #46306b;}   .carte-kpi.bleu .kpi-val {color: #a78bfa;}
+.carte-kpi .kpi-val {color: #3d3552; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi.vert {border-color: #bfe3d2;}   .carte-kpi.vert .kpi-val {color: #2e9e6f;}
+.carte-kpi.orange {border-color: #f0dcbc;} .carte-kpi.orange .kpi-val {color: #d18a2a;}
+.carte-kpi.rouge {border-color: #f3ccd3;}  .carte-kpi.rouge .kpi-val {color: #e05c74;}
+.carte-kpi.bleu {border-color: #c9c2e8;}   .carte-kpi.bleu .kpi-val {color: #7c5cd6;}
 
 /* ---- v32 : badges de statut arrondis, comme la maquette ---- */
 .badge {
@@ -1387,37 +1396,42 @@ st.markdown("""
     font-size: .74rem; font-weight: 600; letter-spacing: .3px;
     margin: 0 .25rem .25rem 0; border: 1px solid transparent;
 }
-.badge.apayer   {background: rgba(255,152,0,.14); color: #ffb84d; border-color: rgba(255,152,0,.45);}
-.badge.partielle{background: rgba(156,120,255,.14); color: #b39dff; border-color: rgba(156,120,255,.45);}
-.badge.averif   {background: rgba(167,139,250,.12); color: #a78bfa; border-color: rgba(167,139,250,.45);}
-.badge.payee    {background: rgba(87,230,168,.12); color: #57e6a8; border-color: rgba(87,230,168,.45);}
-.badge.retard   {background: rgba(255,125,144,.12); color: #ff7d90; border-color: rgba(255,125,144,.45);}
+.badge.apayer   {background: rgba(209,138,42,.14); color: #d18a2a; border-color: rgba(209,138,42,.45);}
+.badge.partielle{background: rgba(138,111,240,.14); color: #b39dff; border-color: rgba(138,111,240,.45);}
+.badge.averif   {background: rgba(124,92,214,.12); color: #7c5cd6; border-color: rgba(124,92,214,.45);}
+.badge.payee    {background: rgba(46,158,111,.12); color: #2e9e6f; border-color: rgba(46,158,111,.45);}
+.badge.retard   {background: rgba(224,92,116,.12); color: #e05c74; border-color: rgba(224,92,116,.45);}
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #a78bfa !important; font-weight: 700; font-size: .72rem;
+    color: #7c5cd6 !important; font-weight: 700; font-size: .72rem;
     letter-spacing: 1.4px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #3d2a5c; padding-bottom: .3rem;
+    border-bottom: 1px solid #d9d2ee; padding-bottom: .3rem;
 }
 .sidebar-note {
-    color: #9d8fc0 !important; font-size: .74rem; margin: .3rem 0 0 0;
+    color: #8a7fa8 !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
-.sidebar-note strong {color: #a78bfa !important;}
+.sidebar-note strong {color: #7c5cd6 !important;}
 
 /* ---- v33 : finitions « trait pour trait » ---- */
-.marque {color: #a78bfa !important; font-weight: 800; font-size: 1rem;
+.marque {color: #7c5cd6 !important; font-weight: 800; font-size: 1rem;
     letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
-    background-color: #241638 !important; border-color: #46306b !important;
+    background-color: #FFFFFF !important; border-color: #c9c2e8 !important;
     border-radius: 8px;
 }
-.stApp div[data-baseweb="input"] input, .stApp textarea {color: #ece6f5 !important;}
-[data-testid="stProgress"] > div {background: #241638; border-radius: 999px;}
-[data-testid="stProgress"] > div > div {background: #a78bfa;}
-div[data-testid="stDataFrame"] {border: 1px solid #3d2a5c; border-radius: 12px;}
-div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
+.stApp div[data-baseweb="input"] input, .stApp textarea {color: #3d3552 !important;}
+[data-testid="stProgress"] > div {background: #FFFFFF; border-radius: 999px;}
+[data-testid="stProgress"] > div > div {background: #7c5cd6;}
+div[data-testid="stDataFrame"] {border: 1px solid #d9d2ee; border-radius: 12px;}
+/* ---- v36 : cartes BLANCHES en relief doux sur fond lavande ---- */
+.hero, .carte-kpi, div[data-testid="stMetric"],
+div[data-testid="stExpander"], div[data-testid="stDataFrame"] {
+    box-shadow: 0 2px 12px rgba(124,92,214,.10);
+}
+div[data-testid="stExpander"] summary:hover span {color: #7c5cd6 !important;}
 /* ---- v32 : menu de la sidebar, style maquette ---- */
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
     padding: .42rem .6rem; border-radius: 8px; font-weight: 500;
@@ -1425,16 +1439,16 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label {
     border-left: 3px solid transparent;
     transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #241638;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #FFFFFF;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-    background: #241638; border-left: 3px solid #a78bfa;
+    background: #FFFFFF; border-left: 3px solid #7c5cd6;
 }
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked),
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
-    color: #a78bfa !important; font-weight: 600;
+    color: #7c5cd6 !important; font-weight: 600;
 }
 /* pastille ronde masquee : rend le menu aussi epure que la maquette */
 section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
@@ -1442,16 +1456,16 @@ section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
 /* ---- v35 : écriture normale, épurée (style « Contenu ») ---- */
 div[data-testid="stExpander"] summary span {
-    color: #d8cef0 !important; font-weight: 500; font-size: .87rem;
+    color: #443c5e !important; font-weight: 500; font-size: .87rem;
 }
 div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
-    color: #b3a6d4 !important; font-size: .87rem;
+    color: #5a5075 !important; font-size: .87rem;
     line-height: 1.6; font-weight: 400;
 }
 div[data-testid="stExpander"] strong {
     color: #e4dcf5 !important; font-weight: 600;
 }
-section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
+section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #7c5cd6 !important;}
 
 
 /* ---- v21 : confort sur telephone ---- */
@@ -1462,7 +1476,7 @@ section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover spa
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #1a0d2e;}
+    section[data-testid="stSidebar"] {background: #EDE7FB;}
 }
 
 </style>
@@ -3374,4 +3388,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 35 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 36 · " + datetime.date.today().strftime("%d/%m/%Y"))
