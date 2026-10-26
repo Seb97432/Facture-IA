@@ -72,7 +72,19 @@ cartes #241638, bordures #3d2a5c, accents LAVANDE #a78bfa (bouton
 principal, section-titres, marque, item actif, barre de progression),
 texte #ece6f5, stats en neons assortis (menthe #57e6a8, peche #ffb84d,
 rose #ff7d90), lueur douce sur le titre. AUCUNE logique modifiee :
-uniquement des valeurs CSS."""
+uniquement des valeurs CSS.
+v35 : ECRITURE NORMALE & SECTIONS EPUREES (a la demande de l'auteur,
+sur exemples visuels) : toute la documentation de la sidebar (essais,
+OCR, mentions legales, confidentialite, guide comptes) est reecrite en
+prose simple — plus de gras seme a chaque mot, plus d'emojis dans les
+titres ni de ponctuation criarde (les blocs SQL/TOML et les boutons
+restent intacts). Titres d'expandeurs courts (« Factures d'exemple »,
+« Lecture des factures scannées (OCR) », « Mentions légales &
+confidentialité », « Confidentialité & sécurité des données »,
+« Comptes & sauvegarde en ligne — guide pas à pas »). CSS : texte des
+accordeons en graisse normale, taille 0.87rem, interligne 1.6. Les
+messages fonctionnels (succes, erreurs, avertissements) gardent leurs
+emojis d'alerte : ce sont des signaux, pas de la decoration."""
 
 import re
 import io
@@ -1428,6 +1440,18 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked)
 section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
 section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
+/* ---- v35 : écriture normale, épurée (style « Contenu ») ---- */
+div[data-testid="stExpander"] summary span {
+    color: #d8cef0 !important; font-weight: 500; font-size: .87rem;
+}
+div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
+    color: #b3a6d4 !important; font-size: .87rem;
+    line-height: 1.6; font-weight: 400;
+}
+div[data-testid="stExpander"] strong {
+    color: #e4dcf5 !important; font-weight: 600;
+}
+section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
 
 
 /* ---- v21 : confort sur telephone ---- */
@@ -1475,7 +1499,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 34")
+    st.caption("Version 35")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1697,15 +1721,13 @@ with st.sidebar:
     )
     st.divider()
 
-    st.markdown('<p class="section-titre">🧪 Essais & lecture des scans</p>',
+    st.markdown('<p class="section-titre">Essais & lecture des scans</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("🧪 Factures d'exemple — teste en 30 secondes"):
-        st.markdown("Trois factures **réelles d'exemple**, dont une anglaise (USD) "
-                    "et une aux pièges classiques (TVA 8,5 %). Télécharge-les sur "
-                    "ton PC, dépose-les dans « 📄 Factures PDF », et regarde "
-                    "le moteur d'analyse extraire, vérifier et alerter : **HT + TVA = TTC**, "
-                    "champs manquants surlignés, zéro invention.")
+    with st.expander("Factures d'exemple"):
+        st.markdown("Trois factures d'exemple, dont une en anglais (USD) et une "
+                    "avec une TVA à 8,5 %. Télécharge-les, dépose-les dans la page "
+                    "Mes factures, et regarde ce que l'application en lit.")
         st.download_button("📄 1 : française classique",
                            facture_test_1(), file_name="facture_test_1.pdf", mime="application/pdf",
                            use_container_width=True)
@@ -1717,106 +1739,97 @@ with st.sidebar:
                            use_container_width=True)
     st.divider()
 
-    with st.expander("🔍 Lecture des factures scannées (OCR)"):
+    with st.expander("Lecture des factures scannées (OCR)"):
         if HAS_OCR:
-            st.success("✅ **OCR actif** — les PDF scannés et photos de factures "
-                       "sont lus automatiquement, avec redressement des pages "
-                       "penchées et correction des chiffres confondus (O ↔ 0).")
+            st.markdown("L'OCR est actif. Les PDF scannés et les photos de "
+                        "factures sont lus automatiquement, pages penchées "
+                        "redressées et chiffres confondus corrigés.")
         else:
-            st.markdown("""**L'OCR active la lecture des factures scannées**
-            (PDF image ou photo, sans texte lisible). Sans lui, seuls les
-            PDF texte fonctionnent.
+            st.markdown("""L'OCR permet de lire les factures scannées (PDF image
+            ou photo). Sans lui, seuls les PDF contenant du texte fonctionnent.
 
-            **🖥️ Sur ton PC (local)** — 3 étapes :
+            Sur ton PC :
             1. `py -m pip install pytesseract pillow`
             2. Installe Tesseract : https://github.com/UB-Mannheim/tesseract/wiki
-            (dans `C:\\Program Files\\Tesseract-OCR`, langues **French** + English)
-            3. **Relance l'application**
+            (dans `C:\\Program Files\\Tesseract-OCR`, langues French et English)
+            3. Relance l'application
 
-            **☁️ Sur Streamlit Cloud** — ajoute à la racine du dépôt un fichier
-            **`packages.txt`** contenant :""")
+            Sur Streamlit Cloud, ajoute à la racine du dépôt un fichier
+            `packages.txt` contenant :""")
             st.code("""tesseract-ocr
 tesseract-ocr-fra""", language="text")
             st.markdown("""puis ajoute `pytesseract` et `pillow` dans
-            **`requirements.txt`**. Après redéploiement, la mention
-            « ✅ OCR actif » doit apparaître ici. Tant qu'elle est absente,
-            les PDF scannés ne sont pas lus — les PDF texte, eux,
-            fonctionnent toujours.""")
+            `requirements.txt`. Après redéploiement, la mention
+            « OCR actif » apparaît ici.""")
 
-    st.markdown('<p class="section-titre">⚖️ Transparence : légal, données & comptes</p>',
+    st.markdown('<p class="section-titre">Transparence : légal, données & comptes</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("⚖️ Mentions légales & confidentialité (lisez-moi)"):
-        st.markdown("""**⚠️ Ce qu'est Facture IA (et ce qu'elle n'est PAS)**
+    with st.expander("Mentions légales & confidentialité"):
+        st.markdown("""Ce qu'est Facture IA — et ce qu'elle n'est pas
 
-        Facture IA est un **outil d'aide à la saisie et au suivi des factures
-        reçues** (fournisseurs, paiements, exports). Ce n'est **ni un logiciel
-        comptable certifié, ni une plateforme agréée** de facturation
+        Facture IA est un outil d'aide à la saisie et au suivi des factures
+        reçues (fournisseurs, paiements, exports). Ce n'est ni un logiciel
+        comptable certifié, ni une plateforme agréée de facturation
         électronique au sens de l'article 289 bis du code général des
         impôts. Les informations affichées ne remplacent pas les conseils
         d'un expert-comptable.
 
-        ---
+        Mentions légales
 
-        **📄 Mentions légales**
+        - Éditeur : Sébastien LESQUELIN — [À COMPLÉTER : adresse, SIREN ou
+          numéro de micro-entreprise le cas échéant]
+        - Contact : [À COMPLÉTER : ton email de contact]
+        - Hébergement de l'application : Streamlit Cloud (Snowflake Inc.)
+        - Hébergement des données : Supabase (région Europe)
 
-        - **Éditeur** : Sébastien LESQUELIN — [À COMPLÉTER : adresse, SIREN
-          ou numéro de micro-entreprise le cas échéant]
-        - **Contact** : [À COMPLÉTER : ton email de contact]
-        - **Hébergement de l'application** : Streamlit Cloud (Snowflake Inc.)
-        - **Hébergement des données** : Supabase (région Europe)
+        Politique de confidentialité (RGPD)
 
-        ---
-
-        **🔒 Politique de confidentialité (RGPD)**
-
-        - **Données traitées** : ton adresse email, un mot de passe (jamais
-        stocké en clair : il est chiffré par Supabase Auth), et le **résumé
-        de tes factures** (fournisseur, n° de facture, dates, montants,
-        paiements). **Les PDF originaux ne sont jamais envoyés en ligne** :
-        ils restent uniquement sur ta propre machine.
-        - **Finalité** : te permettre de gérer tes factures. Aucune donnée
+        - Données traitées : ton adresse email, un mot de passe (jamais
+        stocké en clair : il est chiffré par Supabase Auth) et le résumé de
+        tes factures (fournisseur, numéro, dates, montants, paiements).
+        Les PDF originaux ne sont jamais envoyés en ligne : ils restent
+        sur ta propre machine.
+        - Finalité : te permettre de gérer tes factures. Aucune donnée
         n'est vendue, louée ou partagée avec des tiers.
-        - **Durée de conservation** : jusqu'à ta suppression des données
+        - Durée de conservation : jusqu'à ta suppression des données
         (bouton « Tout vider » dans le Récapitulatif) ou ta demande.
-        - **Sous-traitants techniques** : Supabase (base de données et
+        - Sous-traitants techniques : Supabase (base de données et
         comptes, région Europe) et Streamlit Cloud (hébergement du site).
-        - **Sécurité** : chaque compte n'accède qu'à ses propres données,
+        - Sécurité : chaque compte n'accède qu'à ses propres données,
         vérifié côté serveur (Supabase Auth + règles RLS).
-        - **Tes droits** (accès, rectification, export, suppression) :
-        exporte tes factures (CSV / Excel dans le Récapitulatif), supprime-les
+        - Tes droits (accès, rectification, export, suppression) : exporte
+        tes factures (CSV ou Excel dans le Récapitulatif), supprime-les
         (« Tout vider »), ou écris à [À COMPLÉTER : ton email de contact].
 
-        ---
-
-        **🧪 Cadre du test pilote**
+        Cadre du test pilote
 
         Accès sur invitation, nombre d'utilisateurs limité. En cas de
-        problème : [À COMPLÉTER : ton email]. Note bien : les données
-        saisies pendant le pilote sont **tes données** — fais des essais
-        avec de vraies copies mais garde tes factures importantes
-        sauvegardées ailleurs (export CSV).""")
+        problème : [À COMPLÉTER : ton email]. Les données saisies pendant
+        le pilote sont tes données : fais des essais avec de vraies copies,
+        mais garde tes factures importantes sauvegardées ailleurs
+        (export CSV).""")
 
-    with st.expander("🛡️ Confidentialité & sécurité des données"):
+    with st.expander("Confidentialité & sécurité des données"):
         if _cloud_actif():
-            st.markdown("""**Sauvegarde en ligne : ACTIVE ✅** — voici exactement
-            ce qui part en ligne, et ce qui reste chez toi :
+            st.markdown("""Sauvegarde en ligne active. Voici exactement ce qui
+            part en ligne, et ce qui reste chez toi :
 
-            - **Ce qui est enregistré en ligne** : uniquement le **résumé** de tes
-            factures validées (fournisseur, n°, dates, montants, paiements) dans
-            une base **Supabase** (Europe). Tes données survivent aux
-            redémarrages, aux redéploiements et te suivent sur tous tes appareils.
-            - **Ce qui ne quitte JAMAIS ta machine** : les **PDF originaux**.
-            Ils sont analysés localement puis supprimés du serveur d'hébergement.
-            - **Isolation par compte** : chaque facture est liée à l'identifiant
-            unique (UUID) de TON compte. Les règles RLS de Supabase, vérifiées
-            **côté serveur**, empêchent tout autre compte de lire, modifier ou
-            supprimer tes factures — et t'empêchent d'accéder à celles des autres.
-            - **Double sécurité** : une **copie locale** (`factures.db`) reste
-            sur la machine, marquée à ton UUID, comme sauvegarde de secours.
-            - **Bonne pratique** : ne mets jamais de secret ni de mot de passe
+            - Enregistré en ligne : uniquement le résumé de tes factures
+            validées (fournisseur, numéro, dates, montants, paiements) dans
+            une base Supabase (Europe). Tes données survivent aux
+            redémarrages et te suivent sur tous tes appareils.
+            - Ce qui ne quitte jamais ta machine : les PDF originaux. Ils
+            sont analysés localement puis supprimés du serveur.
+            - Isolation par compte : chaque facture est liée à l'identifiant
+            unique de ton compte. Les règles RLS de Supabase, vérifiées côté
+            serveur, empêchent tout autre compte de lire ou modifier tes
+            factures — et t'empêchent d'accéder à celles des autres.
+            - Double sécurité : une copie locale (factures.db) reste sur la
+            machine, marquée à ton identifiant, comme sauvegarde de secours.
+            - Bonne pratique : ne mets jamais de secret ni de mot de passe
             dans le code ou sur GitHub. Les clés vivent dans les Secrets
-            Streamlit, jamais dans l'application.""")
+            Streamlit.""")
             if _session():
                 if st.button("📤 Envoyer mes factures locales vers la sauvegarde en ligne",
                              key="btn_migrer_sb", use_container_width=True):
@@ -1837,43 +1850,41 @@ tesseract-ocr-fra""", language="text")
             else:
                 st.caption("Connecte-toi pour voir le bouton d'envoi de tes factures.")
         else:
-            st.markdown("""**Mode 100 % local** — tout est traité **sur la machine
-                        où l'application tourne** : les factures validées sont
-                        sauvegardées dans le fichier `factures.db` du dossier de
+            st.markdown("""Mode 100 % local : tout est traité sur la machine
+                        où l'application tourne. Les factures validées sont
+                        sauvegardées dans le fichier factures.db du dossier de
                         l'application. Aucun PDF, aucun montant, aucune donnée
                         n'est envoyé ailleurs.
 
-                        ⚠️ **À savoir si l'app est déployée sur Streamlit Cloud** :
-                        l'espace disque de Streamlit Cloud est **effacé à chaque
-                        redémarrage ou redéploiement** — ta base `factures.db` ne
-                        survivra donc PAS là-bas. Trois solutions, au choix :
+                        À savoir si l'app est déployée sur Streamlit Cloud :
+                        l'espace disque est effacé à chaque redémarrage ou
+                        redéploiement, ta base factures.db ne survivra donc
+                        pas là-bas. Trois solutions, au choix :
 
-                        - Active la **sauvegarde permanente Supabase** (guide
-                        complet dans l'expander ☁️ ci-dessous) ;
-                        - Lance l'application **en local** sur ta machine ;
-                        - **Exporte régulièrement** tes factures (CSV / Excel
+                        - Active la sauvegarde permanente Supabase (guide
+                        complet dans la section ci-dessous) ;
+                        - Lance l'application en local sur ta machine ;
+                        - Exporte régulièrement tes factures (CSV ou Excel
                         dans le Récapitulatif).""")
 
-    with st.expander("☁️ Activer les comptes & la sauvegarde en ligne — guide pas à pas"):
+    with st.expander("Comptes & sauvegarde en ligne — guide pas à pas"):
         st.markdown("""
-        Objectif : que tes factures **survivent sur Streamlit Cloud**, avec de
-        **vrais comptes séparés** (email + mot de passe + code de confirmation
-        à 6 chiffres). Pas besoin d'être développeur : chaque étape est
-        indépendante, aucune donnée n'est perdue en cours de route.
+        Objectif : que tes factures survivent sur Streamlit Cloud, avec de
+        vrais comptes séparés (email, mot de passe et code de confirmation à
+        6 chiffres). Chaque étape est indépendante, aucune donnée n'est
+        perdue en cours de route.
 
-        **1.** Crée un compte sur https://supabase.com puis un nouveau projet
-        (nom libre, ex. `factures-ia`, mot de passe fort, région Europe).
+        1. Crée un compte sur https://supabase.com puis un nouveau projet
+        (nom libre, ex. factures-ia, mot de passe fort, région Europe).
 
-        **2.** Dans Supabase → **Authentication → Providers** : vérifie que
-        **Email** est activé (c'est le cas par défaut). Puis dans
-        **Authentication → Sign Ups**, laisse **« Confirm email » ACTIVÉ** :
-        c'est ce qui envoie le code à 6 chiffres à chaque inscription.
-        Vérifie aussi dans **Authentication → Email Templates** →
-        « Confirm signup » que le message contient `{{ .Token }}`
-        (le code) — c'est le cas par défaut. Ne mets jamais
-        `{{ .ConfirmationURL }}`... si tu préfères le code, garde `{{ .Token }}`.
+        2. Dans Supabase, section Authentication puis Providers : vérifie que
+        Email est activé (c'est le cas par défaut). Dans Authentication puis
+        Sign Ups, laisse « Confirm email » activé : c'est ce qui envoie le
+        code à 6 chiffres à chaque inscription. Dans Authentication puis
+        Email Templates, onglet « Confirm signup », vérifie que le message
+        contient {{ .Token }} (le code) — c'est le cas par défaut.
 
-        **3.** Dans **SQL Editor**, colle ce code et clique sur *Run* :""")
+        3. Dans SQL Editor, colle ce code et clique sur Run :""")
         st.code("""create table if not exists factures (
   id bigint generated by default as identity primary key,
   utilisateur text not null,
@@ -1920,52 +1931,50 @@ create policy "conversation privee" on conversations
   using (auth.uid()::text = utilisateur)
   with check (auth.uid()::text = utilisateur);""", language="sql")
         st.markdown("""
-        ⚠️ **Si tu avais déjà des factures en ligne** (mode avant comptes,
-        marquées `proprietaire`) : elles ne peuvent pas être réattribuées
-        depuis l'application. Colle ce code dans SQL Editor **après ta
-        première inscription** (remplace TON_EMAIL) — c'est ta migration :""")
+        Si tu avais déjà des factures en ligne (mode avant comptes, marquées
+        proprietaire) : elles ne peuvent pas être réattribuées depuis
+        l'application. Colle ce code dans SQL Editor après ta première
+        inscription (remplace TON_EMAIL) — c'est ta migration :""")
         st.code("""update factures
 set utilisateur = (select id from auth.users where email = 'TON_EMAIL')
 where utilisateur = 'proprietaire';""", language="sql")
         st.markdown("""
-        **4.** Dans Supabase → **Settings → API** : copie l'**URL** du projet
-        et la clé **anon / public** (jamais la clé `service_role`).
+        4. Dans Supabase, section Settings puis API : copie l'URL du projet
+        et la clé anon / public (jamais la clé service_role).
 
-        **5.** Sur Streamlit Cloud → ton app → **Settings → Secrets**, colle :""")
+        5. Sur Streamlit Cloud, dans Settings puis Secrets, colle :""")
         st.code("""[factures_ia]
 supabase_url = "https://TON-PROJET.supabase.co"
 supabase_key = "TA-CLE-ANON-PUBLIC"
 """, language="toml")
         st.markdown("""
-        **6.** **Redémarre l'application** : la barre latérale propose
-        « Se connecter » et « **Créer un compte** ». Crée ton compte, puis
-        utilise le bouton **📤** (expander 🛡️) pour envoyer tes factures
-        locales vers ton espace en ligne. Ton fichier `factures.db` local
-        est toujours conservé comme sauvegarde de secours.
+        6. Redémarre l'application : la barre latérale propose
+        « Se connecter » et « Créer un compte ». Crée ton compte, puis
+        utilise le bouton d'envoi (section Confidentialité) pour envoyer tes
+        factures locales vers ton espace en ligne. Ton fichier factures.db
+        local reste conservé comme sauvegarde de secours.
 
-        **Sécurité** : la clé anon reste dans les Secrets Streamlit, jamais
-        dans le code ni sur GitHub. Grâce à Supabase Auth + RLS, chaque
-        compte ne voit **que ses propres factures** — même si quelqu'un
+        Sécurité : la clé anon reste dans les Secrets Streamlit, jamais dans
+        le code ni sur GitHub. Grâce à Supabase Auth et aux règles RLS,
+        chaque compte ne voit que ses propres factures — même si quelqu'un
         modifie le code de l'application, le serveur Supabase refuse.
 
-        ---
-
-        **🧠 Activer l'assistant IA complet (facultatif)** : sur
-        https://platform.mistral.ai → crée un compte → **API Keys** →
-        génère une clé. Puis ajoute-la dans les Secrets Streamlit, sous
-        `[factures_ia]` :
+        Activer l'assistant IA complet (facultatif) : sur
+        https://platform.mistral.ai, crée un compte, puis dans API Keys,
+        génère une clé. Ajoute-la dans les Secrets Streamlit, sous
+        [factures_ia] :
 
         ```
         mistral_api_key = "TA-CLE-MISTRAL"
         ```
 
-        L'assistant 🤖 répond alors comme une vraie IA (questions sur tes
-        factures ET questions générales), avec repli automatique sur le
-        moteur local en cas de panne. ⚠️ Transparence : pour répondre sur
-        tes factures, leurs données sont envoyées à l'API Mistral (c'est
-        affiché sur la page Assistant). L'API est payante à l'usage mais
-        très peu coûteuse à ton volume ; sans clé, l'assistant local
-        fonctionne toujours, sans aucun envoi.""")
+        L'assistant répond alors comme une vraie IA (questions sur tes
+        factures et questions générales), avec repli automatique sur le
+        moteur local en cas de panne. Transparence : pour répondre sur tes
+        factures, leurs données sont envoyées à l'API Mistral (c'est affiché
+        sur la page Assistant). L'API est payante à l'usage mais très peu
+        coûteuse à ton volume ; sans clé, l'assistant local fonctionne
+        toujours, sans aucun envoi.""")
 
 # ============================================================
 # 8. TRAITEMENT
@@ -3365,4 +3374,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 34 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 35 · " + datetime.date.today().strftime("%d/%m/%Y"))
