@@ -1351,7 +1351,7 @@ st.markdown("""
     }
     .stButton > button:hover {border-color: #a78bfa; color: #fff;}
     .stButton > button[kind="primary"] {
-        /* v30 : bouton principal DORE, texte fonce pour un contraste AAA */
+        /* v36 : bouton principal VIOLET, texte blanc */
         background: #a78bfa; color: #1c1033; border: none; font-weight: 700;
     }
     .stButton > button[kind="primary"]:hover {background: #b899ff; color: #1c1033;}
@@ -1499,7 +1499,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 35")
+    st.caption("Version 36")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
