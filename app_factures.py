@@ -31,11 +31,28 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #0b0b0d, cartes anthracite #17171c, accent or #d9b45b
+fond quasi noir #0A0A0A, cartes anthracite #1E1E1E, accent or #FFD700
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
-et formulaires inchanges. Aucune logique modifiee."""
+et formulaires inchanges. Aucune logique modifiee.
+v31 : FIABILITE DES SAUVEGARDES (mission de correction) :
+(1) db_ajouter : plus de retour trompeur — False si ECHEC COMPLET
+(local ET cloud), avertissement 'avert_persist' si cloud en echec ;
+(2) db_remplacer_numero et db_supprimer retournent (ok_local, ok_cloud),
+TOUS les appelants critiques (paiement, confirmation payee, annulation,
+suppression, modification) verifient et n'affichent plus de faux
+succes ; (3) sauver_pdf ne faille plus silencieusement (retour bool +
+avertissement inline + rappel disque ephemere Streamlit Cloud) ;
+(4) messages d'erreur en sidebar pour erreur_sqlite / erreur_pdf /
+avert_persist, avec bouton d'acquittement. Aucune signature d'appel
+cassee : les retours sont additives.
+v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #0A0A0A, cartes #1E1E1E,
+bordures #333, or #FFD700) + fil d'Ariane dynamique « Espace de
+travail / page » + badges de statut arrondis sur le tableau de bord
++ sidebar renommee (« Espace de travail », « Votre espace
+documentaire ») + OCR : alerte si echeance anterieure a la date de
+facture ou annee aberrante (aucune valeur modifiee)."""
 
 import re
 import io
@@ -1140,35 +1157,63 @@ def db_charger():
 
 
 def db_ajouter(ligne):
-    """Ajoute une facture. Retourne True si ajoute, False si la limite de
-    500 factures est atteinte (dans ce cas RIEN n'est enregistre)."""
+    """Ajoute une facture. Contrat de retour (v31, corrige le retour
+    trompeur de la v30) :
+      - False : limite de 500 atteinte, OU ECHEC COMPLET (rien n'a ete
+        ecrit, ni en local ni en ligne) -> l'appelant DOIT le signaler.
+      - True  : au moins une sauvegarde a reussi.
+        En cas d'echec du cloud alors que le local a reussi, un
+        avertissement persistant est pose dans 'avert_persist'.
+    Comportement compatible avec tous les appels existants (bool)."""
     if limite_atteinte():
         return False
     uid = _uid_courant()
+    ok_local = False
     try:
         sqlite_ajouter(ligne, uid)   # copie locale de secours, marquee a ton UUID
-    except Exception:
-        pass
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_sqlite"] = str(e)[:150]
+    ok_cloud = None    # None = cloud non applicable (mode local ou non connecte)
     if _cloud_actif() and _session():
         try:
             cloud_ajouter(ligne)
+            ok_cloud = True
         except Exception as e:
+            ok_cloud = False
             if "session expiree" not in str(e):
                 st.session_state["erreur_cloud"] = str(e)[:200]
+    if not ok_local and ok_cloud is not True:
+        # RIEN n'a ete ecrit nulle part : echec complet, jamais un faux succes.
+        return False
+    if ok_cloud is False:
+        st.session_state["avert_persist"] = (
+            "Facture enregistrée en LOCAL seulement : la sauvegarde en ligne "
+            "a échoué. Sur Streamlit Cloud, le disque local est EFFACÉ à "
+            "chaque redéploiement — utilise le bouton 📤 (expander 🛡️) pour "
+            "l'envoyer en ligne dès que le service revient.")
     return True
 
 
 def db_remplacer_numero(ancien, nouveau):
+    """Remplace une facture. Retourne (ok_local, ok_cloud) — ok_cloud est
+    True quand le cloud n'est pas applicable (mode local). Les appelants
+    qui ignoraient le retour continuent de fonctionner a l'identique."""
     uid = _uid_courant()
+    ok_local = False
     try:
         sqlite_remplacer_numero(ancien, nouveau, uid)
-    except Exception:
-        pass
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_sqlite"] = str(e)[:150]
+    ok_cloud = True
     if _cloud_actif() and _session():
         try:
             cloud_remplacer_numero(ancien, nouveau)
         except Exception as e:
+            ok_cloud = False
             st.session_state["erreur_cloud"] = str(e)[:200]
+    return ok_local, ok_cloud
 
 
 def db_vider():
@@ -1185,16 +1230,24 @@ def db_vider():
 
 
 def db_supprimer(numero, fournisseur):
+    """Supprime une facture. Retourne (ok_local, ok_cloud) — ok_cloud est
+    True quand le cloud n'est pas applicable. Un faux succes n'est plus
+    possible : l'appelant peut verifier."""
     uid = _uid_courant()
+    ok_local = False
     try:
         sqlite_supprimer(numero, fournisseur, uid)
-    except Exception:
-        pass
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_sqlite"] = str(e)[:150]
+    ok_cloud = True
     if _cloud_actif() and _session():
         try:
             cloud_supprimer(numero, fournisseur)
         except Exception as e:
+            ok_cloud = False
             st.session_state["erreur_cloud"] = str(e)[:200]
+    return ok_local, ok_cloud
 
 
 def migrer_vers_supabase():
@@ -1226,85 +1279,99 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: #0b0b0d;}
+    .stApp {background: #0A0A0A;}
     .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
     .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #c9cdd6 !important;}
-    section[data-testid="stSidebar"] {background: #141418; border-right: 1px solid #23252c;}
-    section[data-testid="stSidebar"] * {color: #b8bcc8 !important;}
+    [data-testid="stCaptionContainer"] {color: #cfcfcf !important;}
+    section[data-testid="stSidebar"] {background: #121212; border-right: 1px solid #333333;}
+    section[data-testid="stSidebar"] * {color: #b0b0b0 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #17171c; color: #e6e8ec;
-        border: 1px solid #26262e; border-left: 3px solid #d9b45b;
+        background: #1E1E1E; color: #E0E0E0;
+        border: 1px solid #333333; border-left: 3px solid #FFD700;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #e6e8ec; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;}
-    .hero p {color: #8b90a0; margin: .35rem 0 0 0; font-size: .95rem;}
+    .hero h1 {color: #E0E0E0; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;}
+    .hero p.breadcrumb {color: #8f8f8f; margin: 0 0 .25rem 0; font-size: .78rem;
+        text-transform: uppercase; letter-spacing: 1px;}
+    .hero p {color: #8f8f8f; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #15161b; color: #d9b45b; border: 1px solid #2a2d38;
+        display: inline-block; background: #161616; color: #FFD700; border: 1px solid #3a3a3a;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #23252c; background: #15161b;
+        border-radius: 12px; border: 1px solid #333333; background: #161616;
         overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d7dae2 !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b8bcc8 !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d6d6d6 !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b0b0b0 !important;}
     div[data-testid="stMetric"] {
-        background: #15161b; border: 1px solid #23252c; border-radius: 12px; padding: .9rem;
+        background: #161616; border: 1px solid #333333; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #8b90a0 !important;}
-    div[data-testid="stMetricValue"] {color: #e6e8ec !important;}
+    div[data-testid="stMetricLabel"] p {color: #8f8f8f !important;}
+    div[data-testid="stMetricValue"] {color: #E0E0E0 !important;}
     .stButton > button {
-        background: #1b1d24; color: #d7dae2; border: 1px solid #2a2d38; border-radius: 8px;
+        background: #232323; color: #d6d6d6; border: 1px solid #3a3a3a; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #d9b45b; color: #fff;}
+    .stButton > button:hover {border-color: #FFD700; color: #fff;}
     .stButton > button[kind="primary"] {
         /* v30 : bouton principal DORE, texte fonce pour un contraste AAA */
-        background: #d9b45b; color: #16130a; border: none; font-weight: 700;
+        background: #FFD700; color: #16130a; border: none; font-weight: 700;
     }
-    .stButton > button[kind="primary"]:hover {background: #e6c56d; color: #16130a;}
+    .stButton > button[kind="primary"]:hover {background: #FFDE59; color: #16130a;}
     .stDownloadButton > button {
-        background: #1b1d24; color: #d9b45b; border: 1px solid #2a2d38; border-radius: 8px;
+        background: #232323; color: #FFD700; border: 1px solid #3a3a3a; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #d9b45b; color: #fff;}
+    .stDownloadButton > button:hover {border-color: #FFD700; color: #fff;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #6b5a33; border-radius: 12px; padding: .7rem; background: #121318;
+        border: 1.5px dashed #6b5a33; border-radius: 12px; padding: .7rem; background: #121212;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #15161b;}
-    .stTabs [data-baseweb="tab"] {color: #8b90a0; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #d9b45b;}
-    .stTabs [data-baseweb="tab"]:hover {color: #c9cdd6;}
-    hr {border-color: #23252c;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #161616;}
+    .stTabs [data-baseweb="tab"] {color: #8f8f8f; font-weight: 600;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #FFD700;}
+    .stTabs [data-baseweb="tab"]:hover {color: #cfcfcf;}
+    hr {border-color: #333333;}
 
 /* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #15161b; border: 1px solid #23252c; border-radius: 12px;
+    background: #161616; border: 1px solid #333333; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #8b90a0; font-size: .78rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #8f8f8f; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #e6e8ec; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi .kpi-val {color: #E0E0E0; font-size: 1.35rem; font-weight: 700;}
 .carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #57b98a;}
 .carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #c9a45c;}
 .carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #d97777;}
-.carte-kpi.bleu {border-color: #2a2d38;}   .carte-kpi.bleu .kpi-val {color: #d9b45b;}
+.carte-kpi.bleu {border-color: #3a3a3a;}   .carte-kpi.bleu .kpi-val {color: #FFD700;}
+
+/* ---- v32 : badges de statut arrondis, comme la maquette ---- */
+.badge {
+    display: inline-block; border-radius: 999px; padding: .18rem .7rem;
+    font-size: .74rem; font-weight: 600; letter-spacing: .3px;
+    margin: 0 .25rem .25rem 0; border: 1px solid transparent;
+}
+.badge.apayer   {background: rgba(255,152,0,.14); color: #ffb84d; border-color: rgba(255,152,0,.45);}
+.badge.partielle{background: rgba(156,120,255,.14); color: #b39dff; border-color: rgba(156,120,255,.45);}
+.badge.averif   {background: rgba(255,215,0,.12); color: #FFD700; border-color: rgba(255,215,0,.45);}
+.badge.payee    {background: rgba(87,185,138,.14); color: #57b98a; border-color: rgba(87,185,138,.45);}
+.badge.retard   {background: rgba(217,119,119,.14); color: #d97777; border-color: rgba(217,119,119,.45);}
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #8b90a0; font-weight: 600; font-size: .72rem;
+    color: #8f8f8f; font-weight: 600; font-size: .72rem;
     letter-spacing: 1.2px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #23252c; padding-bottom: .3rem;
+    border-bottom: 1px solid #333333; padding-bottom: .3rem;
 }
 div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
     padding: .28rem .5rem; border-radius: 9px; transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1b1d24;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #232323;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
 
 
@@ -1316,18 +1383,30 @@ div[data-testid="stExpander"] {margin-bottom: .45rem;}
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #0b0b0d;}
+    section[data-testid="stSidebar"] {background: #0A0A0A;}
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<div class="hero">
-  <h1>🧾 Factures IA</h1>
-  <p>Dépose tes factures PDF — l'IA les lit, les vérifie et suit tes paiements.</p>
-</div>
-""", unsafe_allow_html=True)
+# v32 : titre de page + fil d'Ariane, comme la maquette
+# (« Espace de travail / Mes factures »). La page vient de session_state :
+# le hero suit donc automatiquement la navigation.
+_TITRES_PAGES = {
+    "🏠 Tableau de bord": "Vue d'ensemble",
+    "📄 Factures PDF": "Mes factures",
+    "💰 Paiements": "Paiements",
+    "📋 Récapitulatif": "Récapitulatif",
+    "🤖 Assistant": "Assistant IA",
+    "📤 Pour le comptable": "Comptabilité",
+    "❓ Aide": "Aide & informations",
+}
+_page_hero = st.session_state.get("page_courante", "🏠 Tableau de bord")
+_titre_hero = _TITRES_PAGES.get(_page_hero, "Vue d'ensemble")
+st.markdown(
+    '<div class="hero"><p class="breadcrumb">Espace de travail&nbsp;/&nbsp;' +
+    _titre_hero + '</p><h1>' + _titre_hero + '</h1></div>',
+    unsafe_allow_html=True)
 
 # ============================================================
 # 7. SIDEBAR
@@ -1341,7 +1420,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown("### 🧾 Factures IA")
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 30")
+    st.caption("Version 32")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1489,6 +1568,23 @@ with st.sidebar:
         if st.button("🔄 Réessayer maintenant", key="btn_reessayer_cloud"):
             st.session_state.pop("erreur_cloud", None)
             st.rerun()
+    # v31 : avertissements de persistance et d'erreur locale/PDF
+    if st.session_state.get("avert_persist"):
+        st.warning("⚠️ " + str(st.session_state["avert_persist"]))
+        if st.button("✅ J'ai compris", key="btn_ok_persist"):
+            st.session_state.pop("avert_persist", None)
+            st.rerun()
+    if st.session_state.get("erreur_sqlite"):
+        st.error("⚠️ Erreur de la base locale : " + str(st.session_state["erreur_sqlite"]))
+        if st.button("🔄 Effacer ce message", key="btn_ok_sqlite"):
+            st.session_state.pop("erreur_sqlite", None)
+            st.rerun()
+    if st.session_state.get("erreur_pdf"):
+        st.warning("⚠️ Le PDF de la dernière facture n'a PAS pu être conservé : "
+                   + str(st.session_state["erreur_pdf"]))
+        if st.button("✅ OK", key="btn_ok_pdf"):
+            st.session_state.pop("erreur_pdf", None)
+            st.rerun()
     st.divider()
 
     st.markdown("### 🧭 Navigation")
@@ -1504,7 +1600,7 @@ with st.sidebar:
         st.caption("🗂️ **" + str(nb_factures) + " / " + str(LIMITE_FACTURES) +
                    "** facture(s) enregistrée(s) · " + str(reste_f) +
                    " emplacement(s) libre(s) au maximum")
-    st.markdown('<p class="section-titre">Pilotage</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-titre">Espace de travail</p>', unsafe_allow_html=True)
 
     def _nav_a():
         st.session_state["page_courante"] = st.session_state["navigation_page"]
@@ -1523,7 +1619,7 @@ with st.sidebar:
         label_visibility="collapsed",
         on_change=_nav_a,
     )
-    st.markdown('<p class="section-titre">Aide &amp; exports</p>',
+    st.markdown('<p class="section-titre">Votre espace documentaire</p>',
                 unsafe_allow_html=True)
     st.radio(
         "Choisir une page (suite)",
@@ -1892,14 +1988,20 @@ def _nom_pdf(ligne):
 
 def sauver_pdf(ligne, f):
     """Copie le PDF original dans le dossier 'documents_factures' pour
-    pouvoir l'envoyer au comptable plus tard. Échoue silencieusement."""
+    pouvoir l'envoyer au comptable plus tard.
+    Retourne True si le fichier est bien ecrit, False sinon (v31 : plus
+    d'echec silencieux). ATTENTION : ce dossier est sur le disque de
+    l'application — sur Streamlit Cloud il est EFFACE a chaque
+    redéploiement ; ce n'est PAS une sauvegarde permanente."""
     try:
         os.makedirs(DOCS, exist_ok=True)
         _, chemin = _nom_pdf(ligne)
         with open(chemin, "wb") as sortie:
             sortie.write(f.getvalue())
-    except Exception:
-        pass
+        return True
+    except Exception as e:
+        st.session_state["erreur_pdf"] = str(e)[:150]
+        return False
 
 
 def _montant_paye(ligne):
@@ -2214,6 +2316,20 @@ def traiter_facture(f):
     }
     manquants = [c for c in CHAMPS if donnees.get(c) in (None, "")]
     alertes = verifier_coherence(analyse["ht"], analyse["tva"], analyse["ttc"], analyse["taux"])
+    # v32 : coherence des DATES — l'OCR confond souvent date de facture
+    # et date d'echeance, ou lit une annee aberrante. Aucune valeur
+    # n'est modifiee : on alerte seulement, la verification reste humaine.
+    d_f_ext = _date_depuis_txt(donnees.get("Date facture"))
+    d_e_ext = _date_depuis_txt(donnees.get("Date échéance"))
+    auj = datetime.date.today()
+    if d_f_ext and d_e_ext and d_e_ext < d_f_ext:
+        alertes.append("Date d'échéance (" + str(donnees["Date échéance"]) +
+                       ") antérieure à la date de facture (" + str(donnees["Date facture"]) +
+                       ") — les deux dates sont probablement inversées, vérifie-les.")
+    for _lib, _d in (("date de facture", d_f_ext), ("date d'échéance", d_e_ext)):
+        if _d and abs((_d - auj).days) > 3650:
+            alertes.append("La " + _lib + " lue (" + _d.strftime("%d/%m/%Y") +
+                           ") est à plus de 10 ans d'aujourd'hui — année probablement mal lue par l'OCR.")
     return {"donnees": donnees, "manquants": manquants, "alertes": alertes,
             "liste_taux": taux_tva_multiples(t), "methode": methode,
             "confiance": analyse["confiance"], "notes": analyse["notes"],
@@ -2270,6 +2386,20 @@ if page == "🏠 Tableau de bord":
         k6.markdown(_carte("💸 Reste à encaisser", _fm(reste_affiche), "orange"), unsafe_allow_html=True)
         k7.markdown(_carte("📊 Recouvrement", str(round(taux_rec, 1)).replace(".", ",") + " %"), unsafe_allow_html=True)
         k8.markdown(_carte("🚨 En retard", str(len(retards_d)), "rouge" if retards_d else ""), unsafe_allow_html=True)
+
+        # v32 : badges de statut arrondis, comme la maquette
+        nb_payees = sum(1 for l in st.session_state["recap"]
+                        if str(l.get("Payée ?", "")).upper() == "OUI")
+        nb_partielles = sum(1 for l in st.session_state["recap"]
+                            if _statut_paiement(l) == "Partiellement payée")
+        nb_apayer = len(st.session_state["recap"]) - nb_payees - nb_partielles
+        st.markdown(
+            '<span class="badge payee">Payée · ' + str(nb_payees) + '</span>' +
+            '<span class="badge partielle">Paiement partiel · ' + str(nb_partielles) + '</span>' +
+            '<span class="badge apayer">À payer · ' + str(nb_apayer) + '</span>' +
+            ('<span class="badge retard">En retard · ' + str(len(retards_d)) + '</span>'
+             if retards_d else ''),
+            unsafe_allow_html=True)
 
         if retards_d:
             with st.expander("🚨 Factures en retard (" + str(len(retards_d)) + ")",
@@ -2351,8 +2481,14 @@ if page == "📄 Factures PDF" and fichiers:
                 if limite_atteinte(recap_actuel):   # v28 : 500 max
                     bloquees += 1
                     continue
-                db_ajouter(ligne)
-                sauver_pdf(ligne, r["f"])   # v17 : garde le PDF pour le comptable
+                if not db_ajouter(ligne):
+                    bloquees += 1
+                    passees.append(r["f"].name + " (échec de sauvegarde — réessaie)")
+                    continue
+                if not sauver_pdf(ligne, r["f"]):   # v17+v31 : PDF pour le comptable
+                    st.warning("⚠️ La facture est enregistrée mais son PDF n'a PAS pu "
+                               "être conservé : le pack comptable l'indiquera comme "
+                               "manquant. Garde l'original de ton côté.")
                 recap_actuel = recap_actuel + [ligne]
                 ajoutees += 1
             st.session_state["recap"] = db_charger()
@@ -2425,7 +2561,14 @@ if page == "📄 Factures PDF" and fichiers:
                          " » n° " + str(existante.get("N° facture")) +
                          " est déjà enregistrée. Vérifie que ce n'est pas la même.")
                 if st.button("♻️ C'est une correction : remplacer l'existante", key="maj_" + f.name):
-                    db_remplacer_numero(existante, ligne_candidate)
+                    ok_loc_r, ok_cld_r = db_remplacer_numero(existante, ligne_candidate)
+                    if not ok_loc_r and not ok_cld_r:
+                        st.error("⚠️ Remplacement NON enregistré : la sauvegarde a échoué. "
+                                 "Rien n'a été modifié.")
+                        st.stop()
+                    if not ok_cld_r:
+                        st.warning("Remplacement enregistré en LOCAL seulement "
+                                   "(sauvegarde en ligne en échec).")
                     st.session_state["recap"] = db_charger()
                     st.success("Facture mise à jour.")
                     st.rerun()
@@ -2439,10 +2582,16 @@ if page == "📄 Factures PDF" and fichiers:
                          disabled=bool(manquants or alertes) or limite_atteinte()):
                 ligne = {c: df_corrige.iloc[0][c] for c in CHAMPS}
                 if not db_ajouter(ligne):
-                    st.error("🚫 **Limite de " + str(LIMITE_FACTURES) + " factures atteinte.** "
-                             "Exporte puis supprime d'anciennes factures pour libérer de la place.")
+                    st.error("🚫 Enregistrement refusé : soit la limite de " +
+                             str(LIMITE_FACTURES) + " factures est atteinte, soit la " +
+                             "sauvegarde a échoué (local ET en ligne). Exporte puis " +
+                             "supprime d'anciennes factures pour libérer de la place, " +
+                             "ou réessaie dans quelques minutes.")
                     st.stop()
-                sauver_pdf(ligne, f)   # v17 : garde le PDF pour le comptable
+                if not sauver_pdf(ligne, f):   # v17+v31 : PDF pour le comptable
+                    st.warning("⚠️ La facture est enregistrée mais son PDF n'a PAS pu "
+                               "être conservé : le pack comptable l'indiquera comme "
+                               "manquant. Garde l'original de ton côté.")
                 st.session_state["recap"] = db_charger()
                 st.rerun()
 
@@ -2527,8 +2676,16 @@ if page == "💰 Paiements":
                                       "mode": mode_p, "note": note_p})
                         maj["Historique paiements"] = payes
                         maj["Montant payé"] = round(_montant_paye(cible) + montant_p, 2)
-                        db_remplacer_numero(cible, maj)
+                        ok_loc_p, ok_cld_p = db_remplacer_numero(cible, maj)
                         st.session_state["recap"] = db_charger()
+                        if not ok_loc_p and not ok_cld_p:
+                            st.error("⚠️ Paiement NON enregistré : la sauvegarde a "
+                                     "échoué (local ET en ligne). Réessaie — rien n'a été écrit.")
+                            st.stop()
+                        if not ok_cld_p:
+                            st.warning("Paiement enregistré en LOCAL seulement : "
+                                        "la sauvegarde en ligne a échoué. Envoie-le "
+                                        "avec 📤 quand le service revient.")
                         reste_apres = round(reste_p - montant_p, 2)
                         if reste_apres <= 0.005:
                             st.success("Paiement enregistré : la facture est soldée 💰")
@@ -2560,9 +2717,16 @@ if page == "💰 Paiements":
                 if cible_c:
                     maj2 = dict(cible_c[0])
                     maj2["Payée ?"] = "OUI"
-                    db_remplacer_numero(cible_c[0], maj2)
+                    ok_loc_c, ok_cld_c = db_remplacer_numero(cible_c[0], maj2)
+                    if not ok_loc_c and not ok_cld_c:
+                        st.error("⚠️ Confirmation NON enregistrée : la sauvegarde a "
+                                 "échoué. La facture n'a PAS été marquée payée — "
+                                 "réessaie.")
+                        st.stop()
                     st.session_state["recap"] = db_charger()
                     st.session_state.pop("solde_a_confirmer", None)
+                    if not ok_cld_c:
+                        st.warning("Confirmation enregistrée en LOCAL seulement.")
                     st.success("Facture confirmée payée ✔")
                     st.rerun()
                 else:
@@ -2594,7 +2758,13 @@ if page == "💰 Paiements":
                                  key="confirm_" + str(idx_h)):
                         maj = dict(l)
                         maj["Payée ?"] = "OUI"
-                        db_remplacer_numero(l, maj)
+                        ok_loc_h, ok_cld_h = db_remplacer_numero(l, maj)
+                        if not ok_loc_h and not ok_cld_h:
+                            st.error("⚠️ Confirmation NON enregistrée (échec de "
+                                     "sauvegarde). La facture n'est pas marquée payée.")
+                            st.stop()
+                        if not ok_cld_h:
+                            st.warning("Confirmation enregistrée en LOCAL seulement.")
                         st.session_state["recap"] = db_charger()
                         st.rerun()
                 # v18 : annuler le dernier paiement (erreur de saisie, chèque refusé...)
@@ -2610,7 +2780,13 @@ if page == "💰 Paiements":
                         # si la facture était confirmée payée, elle redevient à vérifier
                         if str(l.get("Payée ?", "")).upper() == "OUI":
                             maj_a["Payée ?"] = "NON"
-                        db_remplacer_numero(l, maj_a)
+                        ok_loc_a, ok_cld_a = db_remplacer_numero(l, maj_a)
+                        if not ok_loc_a and not ok_cld_a:
+                            st.error("⚠️ Annulation NON enregistrée (échec de sauvegarde) — "
+                                     "le paiement est toujours dans l'historique.")
+                            st.stop()
+                        if not ok_cld_a:
+                            st.warning("Annulation enregistrée en LOCAL seulement.")
                         st.session_state["recap"] = db_charger()
                         st.success("Dernier paiement annulé (" + str(dernier_a.get("montant")) +
                                    " " + str(dernier_a.get("mode", "")) + " du " +
@@ -3013,7 +3189,12 @@ if page == "📋 Récapitulatif":
                         ttc_paye = _val(maj.get("Montant TTC"))
                         maj["Montant payé"] = (round(ttc_paye, 2) if ttc_paye is not None
                                                else round(_montant_paye(maj), 2))
-                    db_remplacer_numero(cible[0], maj)
+                    ok_loc_x, ok_cld_x = db_remplacer_numero(cible[0], maj)
+                    if not ok_loc_x and not ok_cld_x:
+                        st.error("⚠️ Modification NON enregistrée (échec de sauvegarde).")
+                        st.stop()
+                    if not ok_cld_x:
+                        st.warning("Modification enregistrée en LOCAL seulement.")
                     st.session_state["recap"] = db_charger()
                     st.success("Facture " + num_paye + " → " + nouvel_etat)
                     st.rerun()
@@ -3080,10 +3261,17 @@ if page == "📋 Récapitulatif":
                         cible = [r for r in st.session_state["recap"]
                                  if str(r.get("N° facture", "")).upper() == num_suppr.strip().upper()]
                         if cible:
-                            db_supprimer(num_suppr.strip(), cible[0].get("Fournisseur", ""))
-                            st.session_state["recap"] = db_charger()
-                            st.success("Facture " + num_suppr + " supprimée.")
-                            st.rerun()
+                            ok_loc_s, ok_cld_s = db_supprimer(num_suppr.strip(),
+                                                              cible[0].get("Fournisseur", ""))
+                            if not ok_loc_s and not ok_cld_s:
+                                st.error("⚠️ Suppression NON enregistrée : la sauvegarde "
+                                         "a échoué. La facture est toujours là — réessaie.")
+                            else:
+                                if not ok_cld_s:
+                                    st.warning("Suppression enregistrée en LOCAL seulement.")
+                                st.session_state["recap"] = db_charger()
+                                st.success("Facture " + num_suppr + " supprimée.")
+                                st.rerun()
                         else:
                             st.warning("Aucune facture avec ce numéro.")
                     else:
@@ -3101,4 +3289,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 30 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 32 · " + datetime.date.today().strftime("%d/%m/%Y"))
