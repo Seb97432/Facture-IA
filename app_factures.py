@@ -107,16 +107,16 @@ et un peu plus sombre : degrade #B8A6EC -> #C7B7F0 -> #D4C6F5,
 sidebar #C7B7F0.
 v39 : CONFORT VISUEL USAGE PROLONGE : (1) plus AUCUNE surface
 sombre — bulles de chat de l'assistant et blocs de code forces en
-clair (fond #E0E0E0/#E6E6E6, code en noir) ; (2) le blanc PUR des
+clair (fond #E0E0E0/#DCDCE1, code en noir) ; (2) le blanc PUR des
 cartes, tableaux, metriques et accordéons est ASSOMBRI en #E0E0E0
 (adoucit la lumiere pour un poste occupe 6 h/jour) ; (3) champs de
-saisie #E9E9E9 (un ton plus clair que les cartes, texte noir).
+saisie #DCDCE1 (un ton plus clair que les cartes, texte noir).
 Les ecritures restent noires, accent violet #7c5cd6 inchange.
 v40 : SANTE VISUELLE (a la demande de l'auteur, sur echantillon
 visuel) : toutes les surfaces passent au GRIS FROID CLAIR #E0E0E0
 (cartes, tableaux, metriques, accordeons, bulles de chat, piste de
-progression, item actif sidebar) ; champs de saisie #E9E9E9 ; blocs
-de code #E6E6E6. Ecritures noires, accent violet, fond degrade
+progression, item actif sidebar) ; champs de saisie #DCDCE1 ; blocs
+de code #DCDCE1. Ecritures noires, accent violet, fond degrade
 violet inchanges.
 v41 : VIOLET NUIT (symetrie demandee : le blanc est devenu gris ->
 le violet devient la meme couleur mais EXTREMEMENT sombre) : fond
@@ -126,7 +126,16 @@ champs, alertes, blocs de code et bulles de chat : NOIRES (regles
 de securite). Accents de la sidebar passes en lavande lumineuse
 #a78bfa (marque, titres de sections, item actif) pour rester
 lisibles sur le fond sombre ; badges du tableau de bord en tons
-neon clairs. Cartes et champs restent GRIS #E0E0E0/#E9E9E9."""
+neon clairs. Cartes et champs restent GRIS #E0E0E0/#DCDCE1.
+v42 : ECRITURES NOIRES : regle forcant le noir pur #141414 sur
+TOUTES les surfaces grises (hero, accordeons, metriques, bulles de
+chat, alertes, uploader) ; le gris clair #D8D4E8 ne subsiste QUE
+pour les textes poses directement sur le fond violet nuit (du noir
+y serait illisible).
+v43 : CASES UNIFIEES : toutes les cases encore blanches ou plus
+claires (champs de saisie, zone de depot de fichiers, blocs de
+code) passent en UN SEUL gris harmonieux #DCDCE1, ton qui se marie
+avec les cartes grises #E0E0E0 et le fond violet nuit."""
 
 import re
 import io
@@ -1403,7 +1412,7 @@ st.markdown("""
     }
     .stDownloadButton > button:hover {border-color: #7c5cd6; color: #141414;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #f5f0ff;
+        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #DCDCE1;
     }
     div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #E0E0E0;}
     .stTabs [data-baseweb="tab"] {color: #555555; font-weight: 600;}
@@ -1438,7 +1447,7 @@ st.markdown("""
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #7c5cd6 !important; font-weight: 700; font-size: .72rem;
+    color: #a78bfa !important; font-weight: 700; font-size: .72rem;
     letter-spacing: 1.4px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
     border-bottom: 1px solid #d9d2ee; padding-bottom: .3rem;
@@ -1446,21 +1455,21 @@ st.markdown("""
 .sidebar-note {
     color: #555555 !important; font-size: .74rem; margin: .3rem 0 0 0;
 }
-.sidebar-note strong {color: #7c5cd6 !important;}
+.sidebar-note strong {color: #a78bfa !important;}
 
 /* ---- v33 : finitions « trait pour trait » ---- */
-.marque {color: #7c5cd6 !important; font-weight: 800; font-size: 1rem;
+.marque {color: #a78bfa !important; font-weight: 800; font-size: 1rem;
     letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
     /* v38 : champs de saisie (email, mot de passe...) FORCES en blanc */
-    background-color: #E9E9E9 !important; border-color: #d5d1e3 !important;
+    background-color: #DCDCE1 !important; border-color: #d5d1e3 !important;
     border-radius: 8px;
 }
 /* v38 : filet de securite — cible les <input> eux-memes quelle que
    soit la structure interne de la version de Streamlit */
 .stApp input, .stApp textarea {
-    background-color: #E9E9E9 !important; color: #141414 !important;
+    background-color: #DCDCE1 !important; color: #141414 !important;
     border: 1px solid #d5d1e3 !important; border-radius: 8px;
 }
 .stApp input::placeholder {color: #8a8494 !important;}
@@ -1482,6 +1491,13 @@ section[data-testid="stChatMessage"] span {
 .stTabs [data-baseweb="tab"] {color: #cfc9e0 !important; font-weight: 600;}
 .stTabs [data-baseweb="tab"]:hover {color: #FFFFFF !important;}
 .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
+/* v41 : les zones CLAIRES de Streamlit gardent un texte noir */
+[data-testid="stAlert"] *, div[data-baseweb="toast"] *,
+div[data-testid="stFileUploader"] * {color: #1a1a1a !important;}
+section[data-testid="stChatMessage"] * {color: #2b2b2b !important;}
+/* ---- v42 : sur les surfaces GRISES, ecritures 100 % NOIRES ---- */
+.hero *, div[data-testid="stExpander"] *,
+div[data-testid="stMetric"] * {color: #141414 !important;}
 /* badges clairs sur fond sombre */
 .badge.apayer   {background: rgba(255,152,0,.16); color: #ffb84d; border-color: rgba(255,184,77,.5);}
 .badge.partielle{background: rgba(156,120,255,.16); color: #b39dff; border-color: rgba(179,157,255,.5);}
@@ -1496,7 +1512,7 @@ section[data-testid="stChatMessage"] {
     border-radius: 12px;
 }
 .stApp pre, .stApp div[data-testid="stCodeBlock"] {
-    background: #E6E6E6 !important; border: 1px solid #d9d2ee;
+    background: #DCDCE1 !important; border: 1px solid #d9d2ee;
     border-radius: 8px;
 }
 .stApp pre code, .stApp div[data-testid="stCodeBlock"] code {
@@ -1519,16 +1535,16 @@ section[data-testid="stSidebar"] div[role="radiogroup"] label {
     border-left: 3px solid transparent;
     transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #E0E0E0;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #2E2150;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-    background: #E0E0E0; border-left: 3px solid #7c5cd6;
+    background: #3A2B66; border-left: 3px solid #a78bfa;
 }
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
 section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked),
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
-    color: #7c5cd6 !important; font-weight: 600;
+    color: #b39dff !important; font-weight: 600;
 }
 /* pastille ronde masquee : rend le menu aussi epure que la maquette */
 section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
@@ -1556,7 +1572,7 @@ section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover spa
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #C7B7F0;}
+    section[data-testid="stSidebar"] {background: #221940;}
 }
 
 </style>
@@ -1593,7 +1609,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 40")
+    st.caption("Version 43")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3468,4 +3484,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 40 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 43 · " + datetime.date.today().strftime("%d/%m/%Y"))
