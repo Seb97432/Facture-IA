@@ -1450,255 +1450,173 @@ def migrer_vers_supabase():
     return envoyees, len(cloud)
 
 
-# 6. DESIGN - THEME SOMBRE
+# ============================================================
+# 6. DESIGN - THEME CLAIR, SOBRE ET PROFESSIONNEL (v48)
+# A COLLER A LA PLACE de tout le bloc st.markdown("""<style> ... </style>""")
+# actuel (juste après st.set_page_config). Aucune logique modifiée.
 # ============================================================
 
 st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: linear-gradient(160deg, #1C1333 0%, #241A42 45%, #2B2050 100%);}
-    .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
-    [data-testid="stHeader"] {background: transparent;}
-    /* v41 : fond violet NUIT — les textes poses sur le fond deviennent
-    clairs ; les ecritures dans les cartes/champs restent NOIRES. */
-    .stApp, .stApp p, .stApp span, .stApp label, .stApp li {color: #D8D4E8 !important;}
-    [data-testid="stCaptionContainer"] {color: #D8D4E8 !important;}
-    section[data-testid="stSidebar"] {background: #221940; border-right: 1px solid #443163;}
-    section[data-testid="stSidebar"] * {color: #cfc9e0 !important;}
-    /* ---- v29 : hero sobre, plus de degrade ---- */
-    .hero {
-        background: #2A2145; color: #F2F0FA;
-        border: 1px solid #3D2B5E; border-left: 3px solid #a78bfa;
-        border-radius: 12px;
-        padding: 1rem 1.4rem; margin-bottom: 1rem;
-    }
-    .hero h1 {color: #F2F0FA; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
-    .hero p.breadcrumb {color: #a99fc0; margin: 0 0 .25rem 0; font-size: .78rem;
-        text-transform: uppercase; letter-spacing: 1px;}
-    .hero p {color: #a99fc0; margin: .35rem 0 0 0; font-size: .95rem;}
-    .etapes span {
-        display: inline-block; background: #2A2145; color: #a78bfa; border: 1px solid #4A3A72;
-        border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
-        font-weight: 500; font-size: .85rem;
-    }
-    div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #3D2B5E; background: #2A2145;
-        overflow: hidden;
-    }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #E6E1F2 !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #CFC9E0 !important;}
-    div[data-testid="stMetric"] {
-        background: #2A2145; border: 1px solid #3D2B5E; border-radius: 12px; padding: .9rem;
-    }
-    div[data-testid="stMetricLabel"] p {color: #a99fc0 !important;}
-    div[data-testid="stMetricValue"] {color: #F2F0FA !important;}
-    .stButton > button {
-        background: #322652; color: #F2F0FA; border: 1px solid #4A3A72; border-radius: 8px;
-    }
-    .stButton > button:hover {border-color: #a78bfa; color: #F2F0FA;}
-    .stButton > button[kind="primary"] {
-        /* v36 : bouton principal VIOLET, texte blanc */
-        background: #a78bfa; color: #FFFFFF; border: none; font-weight: 700;
-    }
-    .stButton > button[kind="primary"]:hover {background: #9171e8; color: #FFFFFF;}
-    .stDownloadButton > button {
-        background: #322652; color: #a78bfa; border: 1px solid #4A3A72; border-radius: 8px;
-    }
-    .stDownloadButton > button:hover {border-color: #a78bfa; color: #F2F0FA;}
-    div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #322652;
-    }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #2A2145;}
-    .stTabs [data-baseweb="tab"] {color: #a99fc0; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
-    .stTabs [data-baseweb="tab"]:hover {color: #FFFFFF;}
-    hr {border-color: #3D2B5E;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* ---- v21 : cartes KPI sobres ---- */
-.carte-kpi {
-    background: #2A2145; border: 1px solid #3D2B5E; border-radius: 12px;
-    padding: .8rem .9rem; text-align: center; height: 100%;
+:root {
+    --fond: #F6F7F9;          /* fond de page */
+    --carte: #FFFFFF;         /* cartes, tableaux, champs */
+    --bord: #E3E6EB;          /* bordures fines */
+    --texte: #1B2330;         /* texte principal */
+    --texte-2: #5B6575;       /* texte secondaire */
+    --accent: #3B5BDB;        /* bleu profond, unique accent */
+    --accent-fonce: #2F49B3;
+    --accent-pale: #EDF1FD;
+    --vert: #1E8E5A;  --orange: #B7791F;  --rouge: #C53B4E;
 }
-.carte-kpi .kpi-lib {color: #a99fc0; font-size: .78rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #F2F0FA; font-size: 1.35rem; font-weight: 700;}
-.carte-kpi.vert {border-color: #bfe3d2;}   .carte-kpi.vert .kpi-val {color: #57e6a8;}
-.carte-kpi.orange {border-color: #f0dcbc;} .carte-kpi.orange .kpi-val {color: #ffb84d;}
-.carte-kpi.rouge {border-color: #f3ccd3;}  .carte-kpi.rouge .kpi-val {color: #ff7d90;}
-.carte-kpi.bleu {border-color: #4A3A72;}   .carte-kpi.bleu .kpi-val {color: #a78bfa;}
 
-/* ---- v32 : badges de statut arrondis, comme la maquette ---- */
-.badge {
-    display: inline-block; border-radius: 999px; padding: .18rem .7rem;
-    font-size: .74rem; font-weight: 600; letter-spacing: .3px;
-    margin: 0 .25rem .25rem 0; border: 1px solid transparent;
+html, body, .stApp, .stApp * {font-family: 'Inter', system-ui, sans-serif;}
+.stApp {background: var(--fond);}
+.block-container {padding-top: 1.5rem; max-width: 1280px;}
+[data-testid="stHeader"] {background: transparent;}
+
+/* ---- Textes ---- */
+.stApp, .stApp p, .stApp li, .stApp label, .stApp span {color: var(--texte);}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4 {color: var(--texte); font-weight: 600; letter-spacing: -.2px;}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * {color: var(--texte-2) !important;}
+
+/* ---- En-tête de page ---- */
+.hero {
+    background: var(--carte); border: 1px solid var(--bord); border-radius: 12px;
+    padding: 1.1rem 1.5rem; margin-bottom: 1.2rem;
 }
-.badge.apayer   {background: rgba(209,138,42,.14); color: #ffb84d; border-color: rgba(209,138,42,.45);}
-.badge.partielle{background: rgba(138,111,240,.14); color: #b39dff; border-color: rgba(138,111,240,.45);}
-.badge.averif   {background: rgba(124,92,214,.12); color: #a78bfa; border-color: rgba(124,92,214,.45);}
-.badge.payee    {background: rgba(46,158,111,.12); color: #57e6a8; border-color: rgba(46,158,111,.45);}
-.badge.retard   {background: rgba(224,92,116,.12); color: #ff7d90; border-color: rgba(224,92,116,.45);}
+.hero p.breadcrumb {color: var(--texte-2) !important; margin: 0 0 .2rem 0; font-size: .75rem;
+    text-transform: uppercase; letter-spacing: 1.2px; font-weight: 500;}
+.hero h1 {margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--texte);}
 
-/* ---- v29 : sections de la sidebar, style discret ---- */
+/* ---- Barre latérale ---- */
+section[data-testid="stSidebar"] {background: var(--carte); border-right: 1px solid var(--bord);}
+section[data-testid="stSidebar"] * {color: var(--texte);}
+.marque {color: var(--accent) !important; font-weight: 700; font-size: 1.05rem;
+    letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
 .section-titre {
-    color: #a78bfa !important; font-weight: 700; font-size: .72rem;
-    letter-spacing: 1.4px; text-transform: uppercase;
-    margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #3D2B5E; padding-bottom: .3rem;
+    color: var(--texte-2) !important; font-weight: 600; font-size: .7rem;
+    letter-spacing: 1.3px; text-transform: uppercase;
+    margin: 1rem 0 .35rem 0; padding-bottom: .3rem; border-bottom: 1px solid var(--bord);
 }
-.sidebar-note {
-    color: #a99fc0 !important; font-size: .74rem; margin: .3rem 0 0 0;
-}
-.sidebar-note strong {color: #a78bfa !important;}
+.sidebar-note {color: var(--texte-2) !important; font-size: .76rem; margin: .2rem 0 .4rem 0;}
 
-/* ---- v33 : finitions « trait pour trait » ---- */
-.marque {color: #a78bfa !important; font-weight: 800; font-size: 1rem;
-    letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
+/* Menu de navigation */
+section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .1rem;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label {
+    padding: .5rem .75rem; border-radius: 8px; font-size: .9rem; font-weight: 500;
+    border-left: 3px solid transparent; transition: background .15s;
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: var(--fond);}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background: var(--accent-pale); border-left: 3px solid var(--accent);
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
+    color: var(--accent) !important; font-weight: 600;
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {display: none;}
+
+/* ---- Boutons ---- */
+.stButton > button, .stDownloadButton > button {
+    background: var(--carte); color: var(--texte) !important; border: 1px solid var(--bord);
+    border-radius: 8px; font-weight: 500; transition: all .15s;
+}
+.stButton > button:hover, .stDownloadButton > button:hover {
+    border-color: var(--accent); color: var(--accent) !important; background: var(--accent-pale);
+}
+.stButton > button[kind="primary"] {
+    background: var(--accent); border: 1px solid var(--accent); font-weight: 600;
+}
+.stButton > button[kind="primary"], .stButton > button[kind="primary"] * {color: #FFFFFF !important;}
+.stButton > button[kind="primary"]:hover {background: var(--accent-fonce); border-color: var(--accent-fonce);}
+
+/* ---- Champs de saisie ---- */
 .stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
 .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
-    /* v38 : champs de saisie (email, mot de passe...) FORCES en blanc */
-    background-color: #322652 !important; border-color: #4A3A72 !important;
-    border-radius: 8px;
+    background: var(--carte) !important; border-color: var(--bord) !important; border-radius: 8px;
 }
-/* v44 : filet ULTIME — n'importe quelle case de saisie, quelle que
-   soit sa structure interne : fond gris #322652, texte NOIR
-   (color + webkit-text-fill-color pour navigateurs WebKit). */
-.stApp input, .stApp input[type="text"], .stApp input[type="password"],
-.stApp input[type="email"], .stApp input[type="number"],
-.stApp textarea, .stApp select {
-    background-color: #322652 !important;
-    color: #F2F0FA !important;
-    -webkit-text-fill-color: #F2F0FA !important;
-    caret-color: #F2F0FA !important;
-    border: 1px solid #4A3A72 !important;
-    border-radius: 8px;
+.stApp input, .stApp textarea, .stApp select {
+    background: var(--carte) !important; color: var(--texte) !important;
+    -webkit-text-fill-color: var(--texte) !important; caret-color: var(--accent) !important;
 }
-.stApp input::placeholder {color: #8a8494 !important;}
+.stApp input::placeholder {color: #9AA3B2 !important; -webkit-text-fill-color: #9AA3B2 !important;}
+.stApp div[data-baseweb="input"]:focus-within {border-color: var(--accent) !important;}
 
-/* ---- v41 : lisibilite sur fond violet nuit ---- */
-/* boutons et bulles de chat gardent un texte NOIR sur fond clair */
-.stButton > button, .stButton > button *,
-.stDownloadButton > button, .stDownloadButton > button * {
-    color: #F2F0FA !important;
+/* ---- Cartes, accordéons, métriques, tableaux ---- */
+div[data-testid="stExpander"] {
+    background: var(--carte); border: 1px solid var(--bord); border-radius: 10px;
+    margin-bottom: .5rem; overflow: hidden;
 }
-.stButton > button[kind="primary"], .stButton > button[kind="primary"] * {
-    color: #FFFFFF !important;
-}
-section[data-testid="stChatMessage"] p,
-section[data-testid="stChatMessage"] li,
-section[data-testid="stChatMessage"] span {
-    color: #CFC9E0 !important;
-}
-.stTabs [data-baseweb="tab"] {color: #cfc9e0 !important; font-weight: 600;}
-.stTabs [data-baseweb="tab"]:hover {color: #FFFFFF !important;}
-.stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
-/* v41 : les zones CLAIRES de Streamlit gardent un texte noir */
-[data-testid="stAlert"] *, div[data-baseweb="toast"] * {color: #1a1a1a !important;}
-div[data-testid="stFileUploader"] * {color: #E8E4F2 !important;}
-section[data-testid="stChatMessage"] * {color: #CFC9E0 !important;}
-/* ---- v42 : sur les surfaces GRISES, ecritures 100 % NOIRES ---- */
-.hero *, div[data-testid="stExpander"] *,
-div[data-testid="stMetric"] * {color: #F2F0FA !important;}
-/* badges clairs sur fond sombre */
-.badge.apayer   {background: rgba(255,152,0,.16); color: #ffb84d; border-color: rgba(255,184,77,.5);}
-.badge.partielle{background: rgba(156,120,255,.16); color: #b39dff; border-color: rgba(179,157,255,.5);}
-.badge.averif   {background: rgba(167,139,250,.16); color: #a78bfa; border-color: rgba(167,139,250,.5);}
-.badge.payee    {background: rgba(87,230,168,.14); color: #57e6a8; border-color: rgba(87,230,168,.5);}
-.badge.retard   {background: rgba(255,125,144,.14); color: #ff7d90; border-color: rgba(255,125,144,.5);}
-
-/* ---- v39 : plus AUCUNE surface sombre, blancs assombris (confort
-     visuel pour un usage prolonge : 6 h/jour sur cet ecran) ---- */
-section[data-testid="stChatMessage"] {
-    background: #2A2145 !important; border: 1px solid #3D2B5E;
-    border-radius: 12px;
-}
-.stApp pre, .stApp div[data-testid="stCodeBlock"] {
-    background: #322652 !important; border: 1px solid #3D2B5E;
-    border-radius: 8px;
-}
-.stApp pre code, .stApp div[data-testid="stCodeBlock"] code {
-    color: #F2F0FA !important; background: transparent !important;
-}
-.stApp div[data-baseweb="input"] input, .stApp textarea {color: #F2F0FA !important;}
-[data-testid="stProgress"] > div {background: #2A2145; border-radius: 999px;}
-[data-testid="stProgress"] > div > div {background: #a78bfa;}
-div[data-testid="stDataFrame"] {border: 1px solid #3D2B5E; border-radius: 12px;}
-/* ---- v36 : cartes BLANCHES en relief doux sur fond lavande ---- */
-.hero, .carte-kpi, div[data-testid="stMetric"],
-div[data-testid="stExpander"], div[data-testid="stDataFrame"] {
-    box-shadow: 0 2px 12px rgba(124,92,214,.10);
-}
-div[data-testid="stExpander"] summary:hover span {color: #a78bfa !important;}
-/* ---- v32 : menu de la sidebar, style maquette ---- */
-section[data-testid="stSidebar"] div[role="radiogroup"] label {
-    padding: .42rem .6rem; border-radius: 8px; font-weight: 500;
-    letter-spacing: .8px; font-size: .78rem; text-transform: uppercase;
-    border-left: 3px solid transparent;
-    transition: background .15s;
-}
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #2E2150;}
-section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
-section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
-    background: #3A2B66; border-left: 3px solid #a78bfa;
-}
-section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
-section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
-section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked),
-section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
-    color: #b39dff !important; font-weight: 600;
-}
-/* pastille ronde masquee : rend le menu aussi epure que la maquette */
-section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
-section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
-div[data-testid="stExpander"] {margin-bottom: .45rem;}
-/* ---- v35 : écriture normale, épurée (style « Contenu ») ---- */
-div[data-testid="stExpander"] summary span {
-    color: #1a1a1a !important; font-weight: 500; font-size: .87rem;
-}
+div[data-testid="stExpander"] summary span {font-size: .92rem; font-weight: 500; color: var(--texte);}
+div[data-testid="stExpander"] summary:hover span {color: var(--accent);}
 div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
-    color: #CFC9E0 !important; font-size: .87rem;
-    line-height: 1.6; font-weight: 400;
+    font-size: .9rem; line-height: 1.6; color: var(--texte);
 }
-div[data-testid="stExpander"] strong {
-    color: #e4dcf5 !important; font-weight: 600;
+div[data-testid="stMetric"] {
+    background: var(--carte); border: 1px solid var(--bord); border-radius: 10px; padding: .9rem 1rem;
 }
-section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #a78bfa !important;}
+div[data-testid="stMetricLabel"] p {color: var(--texte-2) !important; font-size: .8rem;}
+div[data-testid="stMetricValue"] {color: var(--texte); font-weight: 700;}
+div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
+    border: 1px solid var(--bord); border-radius: 10px; overflow: hidden;
+}
+div[data-testid="stFileUploader"] {
+    background: var(--carte); border: 1.5px dashed #B9C2D0; border-radius: 12px; padding: .8rem;
+}
+div[data-testid="stFileUploader"] * {color: var(--texte-2) !important;}
+.stApp pre, div[data-testid="stCodeBlock"] {
+    background: #F1F3F6 !important; border: 1px solid var(--bord); border-radius: 8px;
+}
+.stApp pre code {color: var(--texte) !important; background: transparent !important;}
 
+/* ---- Messages du chat ---- */
+section[data-testid="stChatMessage"], div[data-testid="stChatMessage"] {
+    background: var(--carte); border: 1px solid var(--bord); border-radius: 12px;
+}
 
-/* ---- v21 : confort sur telephone ---- */
+/* ---- Onglets, progression, séparateurs ---- */
+.stTabs [data-baseweb="tab"] {color: var(--texte-2); font-weight: 500;}
+.stTabs [aria-selected="true"] {color: var(--accent) !important; font-weight: 600;}
+.stTabs [data-baseweb="tab-highlight"] {background: var(--accent);}
+[data-testid="stProgress"] > div {background: var(--bord); border-radius: 999px;}
+[data-testid="stProgress"] > div > div {background: var(--accent);}
+hr {border-color: var(--bord);}
+
+/* ---- Cartes chiffres clés (tableau de bord) ---- */
+.carte-kpi {
+    background: var(--carte); border: 1px solid var(--bord); border-radius: 10px;
+    padding: .9rem 1rem; text-align: left; height: 100%; margin-bottom: .6rem;
+}
+.carte-kpi .kpi-lib {color: var(--texte-2); font-size: .74rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: .35rem;}
+.carte-kpi .kpi-val {color: var(--texte); font-size: 1.45rem; font-weight: 700;}
+.carte-kpi.vert .kpi-val {color: var(--vert);}
+.carte-kpi.orange .kpi-val {color: var(--orange);}
+.carte-kpi.rouge .kpi-val {color: var(--rouge);}
+.carte-kpi.bleu .kpi-val {color: var(--accent);}
+
+/* ---- Badges de statut ---- */
+.badge {display: inline-block; border-radius: 999px; padding: .2rem .75rem; font-size: .75rem;
+    font-weight: 600; margin: 0 .3rem .3rem 0; border: 1px solid transparent;}
+.badge.payee     {background: #E7F6EE; color: var(--vert);   border-color: #BFE3D0;}
+.badge.partielle {background: var(--accent-pale); color: var(--accent); border-color: #C9D4F7;}
+.badge.apayer    {background: #FDF3E1; color: var(--orange); border-color: #F0DCB4;}
+.badge.averif    {background: #F1F3F6; color: var(--texte-2); border-color: var(--bord);}
+.badge.retard    {background: #FCEAED; color: var(--rouge);  border-color: #F3C7CE;}
+
+/* ---- Mobile ---- */
 @media (max-width: 640px) {
-    .block-container {padding: .7rem .8rem 2rem .8rem; max-width: 100%;}
-    .hero {padding: 1.1rem 1.2rem; border-radius: 14px;}
-    .hero h1 {font-size: 1.35rem;}
-    .hero p {font-size: .88rem;}
-    .etapes span {font-size: .78rem; padding: .3rem .6rem;}
-    .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #221940;}
+    .block-container {padding: .8rem .8rem 2rem .8rem;}
+    .hero {padding: .9rem 1rem;}
+    .hero h1 {font-size: 1.3rem;}
+    .carte-kpi .kpi-val {font-size: 1.2rem;}
 }
-
 </style>
 """, unsafe_allow_html=True)
-
-# v32 : titre de page + fil d'Ariane, comme la maquette
-# (« Espace de travail / Mes factures »). La page vient de session_state :
-# le hero suit donc automatiquement la navigation.
-_TITRES_PAGES = {
-    "🏠 Tableau de bord": "Vue d'ensemble",
-    "📄 Factures PDF": "Mes factures",
-    "💰 Paiements": "Paiements",
-    "📋 Récapitulatif": "Comptabilité",
-    "🤖 Assistant": "Assistant IA",
-    "📤 Pour le comptable": "Exports comptables",
-    "❓ Aide": "Aide & réglages",
-}
-_page_hero = st.session_state.get("page_courante", "🏠 Tableau de bord")
-_titre_hero = _TITRES_PAGES.get(_page_hero, "Vue d'ensemble")
-st.markdown(
-    '<div class="hero"><p class="breadcrumb">Espace de travail&nbsp;/&nbsp;' +
-    _titre_hero + '</p><h1>' + _titre_hero + '</h1></div>',
-    unsafe_allow_html=True)
 
 # ============================================================
 # 7. SIDEBAR
