@@ -161,7 +161,16 @@ OCR RENFORCE : petites images AGRANDIES x2 (LANCZOS) avant lecture,
 nettete UnsharpMask appliquee, deux passes de lecture EN PLUS
 (600 dpi pour les tout petits caracteres, et une passe photo sans
 binarisation). Fusion multi-lectures et validation humaine
-inchangees."""
+inchangees.
+v47 : PDF ORIGINAUX DURABLES (chantier pre-vente n°1) : bucket PRIVE
+Supabase Storage 'factures-pdf', chaque PDF dans le dossier de son
+proprietaire ({uuid}/{cle}.pdf), regles Storage dans le guide.
+sauver_pdf ecrit EN LOCAL + ENVOIE AU STORAGE (retour bool inchange :
+True si au moins une ecriture reussit ; avertissement sidebar
+'avert_pdf_cloud' si le Storage echoue). Nouvel expander « Mes PDF
+sauvegardes » dans le Recapitulatif pour re-telecharger un PDF.
+SQL 3 bis du guide A INSTALLER COTE SERVEUR. Les factures
+anterieures ne sont pas remontees automatiquement."""
 
 import re
 import io
@@ -1111,6 +1120,53 @@ def _sb_requete(methode, chemin, donnees=None, params=None, jeton=None):
     return r.json() if r.content else None
 
 
+# ---------- v47 : PDF ORIGINAUX DANS SUPABASE STORAGE (durables) ----------
+# Bucket PRIVE 'factures-pdf'. Chaque PDF vit dans le dossier de SON
+# proprietaire : {uuid}/{cle_facture}.pdf. Les regles Storage (donnees
+# dans le guide) n'autorisent un acces qu'au proprietaire du fichier :
+# meme une interface modifiee ne peut pas lire les PDF d'un autre.
+
+def _pdf_chemin_cloud(ligne):
+    """Chemin du PDF dans le bucket : {uuid}/{cle}.pdf (cles securisees)."""
+    base = re.sub(r"[^A-Za-z0-9_\-]", "_", _cle(ligne).replace("|", "_"))
+    return _uid_courant() + "/" + base[:120] + ".pdf"
+
+
+def _storage_requete(methode, chemin_objet, donnees=None):
+    """Appel vers Supabase Storage AVEC le jeton de l'utilisateur.
+    Retourne l'objet requests brut (ou None si la config est absente)."""
+    url, key = _cloud_config()
+    token = _session()["token"]
+    from urllib.parse import quote
+    chemin = "/storage/v1/object/factures-pdf/" + quote(chemin_objet, safe="/")
+    entetes = {"apikey": key, "Authorization": "Bearer " + token,
+               "Content-Type": "application/octet-stream", "x-upsert": "true"}
+    return requests.request(methode, url + chemin, headers=entetes,
+                            data=donnees, timeout=90)
+
+
+def cloud_pdf_envoyer(ligne, f):
+    """Envoie (ou remplace) le PDF original dans le Storage en ligne.
+    Retourne True si le serveur confirme l'ecriture."""
+    try:
+        r = _storage_requete("POST", _pdf_chemin_cloud(ligne), f.getvalue())
+        return r is not None and 200 <= r.status_code < 300
+    except Exception:
+        return False
+
+
+def cloud_pdf_telecharger(ligne):
+    """Recupere le PDF original depuis le Storage. Retourne les octets
+    du fichier, ou None si absent/inaccessible."""
+    try:
+        r = _storage_requete("GET", _pdf_chemin_cloud(ligne))
+        if r is not None and 200 <= r.status_code < 300:
+            return r.content
+    except Exception:
+        pass
+    return None
+
+
 def _cle(ligne):
     """Cle d'identification d'une facture (numero + fournisseur), pour
     dedoublonner lors de la fusion local + cloud et de la migration."""
@@ -1656,7 +1712,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 46")
+    st.caption("Version 47")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1814,6 +1870,15 @@ with st.sidebar:
         st.error("⚠️ Erreur de la base locale : " + str(st.session_state["erreur_sqlite"]))
         if st.button("🔄 Effacer ce message", key="btn_ok_sqlite"):
             st.session_state.pop("erreur_sqlite", None)
+            st.rerun()
+    if st.session_state.get("avert_pdf_cloud"):
+        st.warning("⚠️ La facture est enregistrée, mais son PDF n'a PAS pu être "
+                   "envoyé dans la sauvegarde en ligne (Storage). Il n'existe "
+                   "que sur le disque local, EFFACÉ à chaque redéploiement. "
+                   "Vérifie que le bucket « factures-pdf » et ses règles "
+                   "(voir le guide) sont installés, puis redépose la facture.")
+        if st.button("✅ OK", key="btn_ok_pdf_cloud"):
+            st.session_state.pop("avert_pdf_cloud", None)
             st.rerun()
     if st.session_state.get("erreur_pdf"):
         st.warning("⚠️ Le PDF de la dernière facture n'a PAS pu être conservé : "
@@ -2102,6 +2167,21 @@ create policy "conversation privee" on conversations
 set utilisateur = (select id from auth.users where email = 'TON_EMAIL')
 where utilisateur = 'proprietaire';""", language="sql")
         st.markdown("""
+        3 bis. TOUJOURS dans SQL Editor, colle ce second code (v47 :
+        il crée le stockage DURABLE des PDF originaux — bucket privé
+        « factures-pdf », accessible uniquement à son propriétaire) :""")
+        st.code("""insert into storage.buckets (id, name, public)
+values ('factures-pdf', 'factures-pdf', false)
+on conflict (id) do nothing;
+
+drop policy if exists "chacun ses pdf" on storage.objects;
+
+create policy "chacun ses pdf" on storage.objects
+  for all
+  using (bucket_id = 'factures-pdf' and owner = auth.uid()::text)
+  with check (bucket_id = 'factures-pdf' and owner = auth.uid()::text);""",
+                language="sql")
+        st.markdown("""
         4. Dans Supabase, section Settings puis API : copie l'URL du projet
         et la clé anon / public (jamais la clé service_role).
 
@@ -2226,21 +2306,30 @@ def _nom_pdf(ligne):
 
 
 def sauver_pdf(ligne, f):
-    """Copie le PDF original dans le dossier 'documents_factures' pour
-    pouvoir l'envoyer au comptable plus tard.
-    Retourne True si le fichier est bien ecrit, False sinon (v31 : plus
-    d'echec silencieux). ATTENTION : ce dossier est sur le disque de
-    l'application — sur Streamlit Cloud il est EFFACE a chaque
-    redéploiement ; ce n'est PAS une sauvegarde permanente."""
+    """v47 : sauvegarde DUPLIQUEE du PDF original :
+    (1) copie locale 'documents_factures' (pour le pack comptable) ;
+    (2) envoi SUPABASE STORAGE (durable, survit aux redéploiements)
+    si l'utilisateur est connecte et le cloud actif.
+    Retourne True si AU MOINS une des deux ecritures reussit ; les
+    messages d'avertissement precis sont poses dans session_state."""
+    ok_local = False
     try:
         os.makedirs(DOCS, exist_ok=True)
         _, chemin = _nom_pdf(ligne)
         with open(chemin, "wb") as sortie:
             sortie.write(f.getvalue())
-        return True
+        ok_local = True
     except Exception as e:
         st.session_state["erreur_pdf"] = str(e)[:150]
-        return False
+    ok_cloud = False
+    if _cloud_actif() and _session():
+        ok_cloud = cloud_pdf_envoyer(ligne, f)
+        if not ok_cloud:
+            st.session_state["avert_pdf_cloud"] = True
+    else:
+        # mode local pur : pas d'avertissement, c'est le mode attendu
+        pass
+    return ok_local or ok_cloud
 
 
 def _montant_paye(ligne):
@@ -3420,7 +3509,34 @@ if page == "📋 Récapitulatif":
             st.caption(str(len(df_affiche)) + " facture(s) trouvée(s) sur " + str(len(df_recap)) + ".")
 
         # Marquer payee / non payee (confirmation humaine, historique preserve)
-        with st.expander("✅ Marquer une facture comme payée / non payée"):
+        with st.expander("📄 Mes PDF sauvegardés (re-télécharger)") as _exp_pdf:
+        st.markdown("Tes PDF originaux sont conservés en ligne (Storage) et "
+                    "survivent aux redéploiements. Choisis une facture et "
+                    "re-télécharge son PDF quand tu veux.")
+        _intitules_pdf = [
+            str(l.get("Fournisseur", "?")) + " — n° " + str(l.get("N° facture", "?"))
+            for l in st.session_state["recap"]]
+        _choix_pdf = st.selectbox("Facture", _intitules_pdf,
+                                  key="choix_pdf_recap")
+        _ligne_pdf = st.session_state["recap"][_intitules_pdf.index(_choix_pdf)]
+        if _cloud_actif() and _session():
+            if st.button("⬇️ Re-télécharger ce PDF", key="btn_pdf_recap"):
+                _octets = cloud_pdf_telecharger(_ligne_pdf)
+                if _octets:
+                    st.download_button("💾 Enregistrer le PDF", _octets,
+                                       file_name=str(_ligne_pdf.get("Fournisseur", "facture"))
+                                       + "_" + str(_ligne_pdf.get("N° facture", "")) + ".pdf",
+                                       mime="application/pdf", key="dl_pdf_recap")
+                else:
+                    st.warning("Ce PDF n'est pas dans la sauvegarde en ligne "
+                               "(facture antérieure à la mise en place du "
+                               "Storage, ou envoi échoué). Redépose-le depuis "
+                               "« Mes factures » pour l'y envoyer.")
+        else:
+            st.caption("Connecte-toi (avec la sauvegarde en ligne active) pour "
+                       "re-télécharger tes PDF.")
+
+    with st.expander("✅ Marquer une facture comme payée / non payée"):
             st.caption("Pour un paiement PARTIEL ou un historique détaillé, utilise la page "
                        "« 💰 Paiements ». Ici, « OUI » = confirmation que TOUT est payé.")
             c_num, c_etat, c_ok = st.columns([2, 1, 1])
@@ -3537,4 +3653,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 46 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 47 · " + datetime.date.today().strftime("%d/%m/%Y"))
