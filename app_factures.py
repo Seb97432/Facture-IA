@@ -3508,7 +3508,7 @@ if page == "📋 Récapitulatif":
             df_affiche = df_affiche[masque]
             st.caption(str(len(df_affiche)) + " facture(s) trouvée(s) sur " + str(len(df_recap)) + ".")
 
-        # Marquer payee / non payee (confirmation humaine, historique preserve)
+        # PDF durables : re-téléchargement depuis le Storage en ligne
         with st.expander("📄 Mes PDF sauvegardés (re-télécharger)") as _exp_pdf:
             st.markdown("Tes PDF originaux sont conservés en ligne (Storage) et "
                         "survivent aux redéploiements. Choisis une facture et "
@@ -3536,7 +3536,7 @@ if page == "📋 Récapitulatif":
                 st.caption("Connecte-toi (avec la sauvegarde en ligne active) pour "
                            "re-télécharger tes PDF.")
 
-    with st.expander("✅ Marquer une facture comme payée / non payée"):
+        with st.expander("✅ Marquer une facture comme payée / non payée"):
             st.caption("Pour un paiement PARTIEL ou un historique détaillé, utilise la page "
                        "« 💰 Paiements ». Ici, « OUI » = confirmation que TOUT est payé.")
             c_num, c_etat, c_ok = st.columns([2, 1, 1])
