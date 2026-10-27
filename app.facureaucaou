@@ -31,11 +31,146 @@ footer nettoyees. + RAPPEL FIABILITE OCR : un trio HT+TVA=TTC coherant
 ne garantit pas que les montants lus sont exacts (caption avant
 enregistrement).
 v30 : IDENTITE NOIR & OR (meme charte que l'autre app de l'auteur) :
-fond quasi noir #0b0b0d, cartes anthracite #17171c, accent or #d9b45b
+fond quasi noir #C7B7F0, cartes anthracite #FFFFFF, accent or #a78bfa
 reserve aux elements importants (bouton principal dore a texte fonce
 contraste AAA, hero a liseret or, onglets et boutons secondaires dores,
 cartes KPI bleu->or). Lisibilite : or jamais en texte long, tableaux
-et formulaires inchanges. Aucune logique modifiee."""
+et formulaires inchanges. Aucune logique modifiee.
+v31 : FIABILITE DES SAUVEGARDES (mission de correction) :
+(1) db_ajouter : plus de retour trompeur — False si ECHEC COMPLET
+(local ET cloud), avertissement 'avert_persist' si cloud en echec ;
+(2) db_remplacer_numero et db_supprimer retournent (ok_local, ok_cloud),
+TOUS les appelants critiques (paiement, confirmation payee, annulation,
+suppression, modification) verifient et n'affichent plus de faux
+succes ; (3) sauver_pdf ne faille plus silencieusement (retour bool +
+avertissement inline + rappel disque ephemere Streamlit Cloud) ;
+(4) messages d'erreur en sidebar pour erreur_sqlite / erreur_pdf /
+avert_persist, avec bouton d'acquittement. Aucune signature d'appel
+cassee : les retours sont additives.
+v32 : DESIGN MAQUETTE TRAIT POUR TRAIT (fond #C7B7F0, cartes #FFFFFF,
+bordures #333, or #a78bfa) + fil d'Ariane dynamique « Espace de
+travail / page » + badges de statut arrondis sur le tableau de bord
++ sidebar renommee (« Espace de travail », « Votre espace
+documentaire ») + OCR : alerte si echeance anterieure a la date de
+facture ou annee aberrante (aucune valeur modifiee).
+v33 : CARTES FACTURE + NAVIGATION MAQUETTE : (1) chaque PDF lu affiche
+un bouton « PDF original » (download du fichier depose) directement
+dans sa carte, a cote du texte brut lu (« Ce que l'IA a lu ») et du
+tableau editable st.data_editor (correction directe, deja present) ;
+(2) radios de navigation avec format_func = libelles EXACTS de la
+maquette, sans emojis (« Vue d'ensemble », « Mes factures (03) »,
+« Paiements », « Comptabilité », « Assistant IA », « Exports
+comptables », « Aide & réglages ») — les VALEURS (cles de pages)
+sont inchangees, aucun if page == a modifier ; (3) finitions : marque
+sidebar en or majuscules, titre « Navigation » supprime, container
+elargi 1400px, champs de saisie sombres, barre de progression doree,
+tableaux bordes. Aucune logique de calcul modifiee.
+v34 : PALETTE SYNTHWAVE HARMONIEUSE (a la demande de l'auteur : les
+couleurs precedentes ne se mariaient pas). Tout le theme passe en
+violets profonds qui se fondent : fond en DEGRADE (150b26 -> 241440),
+cartes #FFFFFF, bordures #3D2B5E, accents LAVANDE #a78bfa (bouton
+principal, section-titres, marque, item actif, barre de progression),
+texte #F2F0FA, stats en neons assortis (menthe #57e6a8, peche #ffb84d,
+rose #ff7d90), lueur douce sur le titre. AUCUNE logique modifiee :
+uniquement des valeurs CSS.
+v35 : ECRITURE NORMALE & SECTIONS EPUREES (a la demande de l'auteur,
+sur exemples visuels) : toute la documentation de la sidebar (essais,
+OCR, mentions legales, confidentialite, guide comptes) est reecrite en
+prose simple — plus de gras seme a chaque mot, plus d'emojis dans les
+titres ni de ponctuation criarde (les blocs SQL/TOML et les boutons
+restent intacts). Titres d'expandeurs courts (« Factures d'exemple »,
+« Lecture des factures scannées (OCR) », « Mentions légales &
+confidentialité », « Confidentialité & sécurité des données »,
+« Comptes & sauvegarde en ligne — guide pas à pas »). CSS : texte des
+accordeons en graisse normale, taille 0.87rem, interligne 1.6. Les
+messages fonctionnels (succes, erreurs, avertissements) gardent leurs
+emojis d'alerte : ce sont des signaux, pas de la decoration.
+v36 : THEME LAVANDE CLAIR & BLANC (a la demande de l'auteur, sur
+exemple visuel de degrade lavande pale) : le violet profond laisse
+place a un fond en DEGRADE lavande clair (#B8A6EC -> #D4C6F5),
+cartes/accordeons/champs BLANCS avec ombre violette tres douce,
+bordures lavande #3D2B5E, accent violet #a78bfa (bouton principal
+violet a texte blanc, item actif, marque, titres de sections, barre
+de progression), textes gris-violet #F2F0FA/#1a1a1a, stats foncees
+pour rester lisibles sur blanc (vert #57e6a8, peche #ffb84d, rose
+#ff7d90). Lueur du titre retiree. AUCUNE logique modifiee :
+uniquement des valeurs CSS.
+v37 : AJUSTEMENTS DEMANDES : fond UN PEU PLUS VIOLET (degrade
+#B8A6EC -> #D4C6F5, sidebar #C7B7F0), TOUTES les ecritures en NOIR
+(#F2F0FA / #1a1a1a, textes secondaires #CFC9E0 et #a99fc0), champs de
+saisie (email, mot de passe...) en GRIS TRES CLAIR #f3f2f6 bordure
+#4A3A72. Cartes toujours blanches, accent violet #a78bfa inchange.
+v38 : (1) cases email/mot de passe FORCES en blanc par un selecteur
+direct sur les <input> eux-memes (le CSS precedent ne matchait pas
+la structure interne de la version Streamlit) ; (2) fond PLUS VIOLET
+et un peu plus sombre : degrade #B8A6EC -> #C7B7F0 -> #D4C6F5,
+sidebar #C7B7F0.
+v39 : CONFORT VISUEL USAGE PROLONGE : (1) plus AUCUNE surface
+sombre — bulles de chat de l'assistant et blocs de code forces en
+clair (fond #2A2145/#322652, code en noir) ; (2) le blanc PUR des
+cartes, tableaux, metriques et accordéons est ASSOMBRI en #2A2145
+(adoucit la lumiere pour un poste occupe 6 h/jour) ; (3) champs de
+saisie #322652 (un ton plus clair que les cartes, texte noir).
+Les ecritures restent noires, accent violet #a78bfa inchange.
+v40 : SANTE VISUELLE (a la demande de l'auteur, sur echantillon
+visuel) : toutes les surfaces passent au GRIS FROID CLAIR #2A2145
+(cartes, tableaux, metriques, accordeons, bulles de chat, piste de
+progression, item actif sidebar) ; champs de saisie #322652 ; blocs
+de code #322652. Ecritures noires, accent violet, fond degrade
+violet inchanges.
+v41 : VIOLET NUIT (symetrie demandee : le blanc est devenu gris ->
+le violet devient la meme couleur mais EXTREMEMENT sombre) : fond
+en degrade violet nuit #1C1333 -> #2B2050, sidebar #221940. Textes
+poses sur le fond : gris clair #D8D4E8 ; ecritures dans les cartes,
+champs, alertes, blocs de code et bulles de chat : NOIRES (regles
+de securite). Accents de la sidebar passes en lavande lumineuse
+#a78bfa (marque, titres de sections, item actif) pour rester
+lisibles sur le fond sombre ; badges du tableau de bord en tons
+neon clairs. Cartes et champs restent GRIS #2A2145/#322652.
+v42 : ECRITURES NOIRES : regle forcant le noir pur #F2F0FA sur
+TOUTES les surfaces grises (hero, accordeons, metriques, bulles de
+chat, alertes, uploader) ; le gris clair #D8D4E8 ne subsiste QUE
+pour les textes poses directement sur le fond violet nuit (du noir
+y serait illisible).
+v43 : CASES UNIFIEES : toutes les cases encore blanches ou plus
+claires (champs de saisie, zone de depot de fichiers, blocs de
+code) passent en UN SEUL gris harmonieux #322652, ton qui se marie
+avec les cartes grises #2A2145 et le fond violet nuit.
+v44 : filet ULTIME sur les cases : tout <input>/<textarea>/<select>
+de l'application = fond gris #322652 + texte NOIR force (color,
+-webkit-text-fill-color, caret-color) — corrige le texte gris pale
+illisible signale dans les champs email/mot de passe.
+v45 : ECRITURES BLANCHES PARTOUT (a la demande de l'auteur : « les
+ecritures doivent etre blanches, meme le tableau de bord, la barre
+laterale et tout le contenu ») : les surfaces passent en violet
+sombre assorci pour que le blanc soit lisible — cartes/metrics/
+accordeons/bulles #2A2145, cases et boutons #322652, bordures
+#3D2B5E/#4A3A72, textes #F2F0FA (titres) et #CFC9E0 (corps), labels
+#a99fc0, accent lavande #a78bfa, stats neon claires, uploader
+sombre a texte clair. Les alertes Streamlit gardent leur texte
+fonce (fond clair d'origine). RAPPEL DEPLOIEMENT : rien ne change sur
+le site tant que le code n'est pas copie dans app_factures.py et
+pousse sur GitHub.
+v46 : LIMITE PORTEE A 1000 FACTURES (a la demande de l'auteur) :
+LIMITE_FACTURES = 1000, policy SQL renommee limite_1000_factures
+(< 1000), guide de migration fourni (drop de l'ancienne policy 500),
+textes d'aide mis a jour. COTE SERVEUR : la nouvelle policy doit
+etre installee dans Supabase (SQL Editor), sinon le serveur refuse
+toujours au-dela de 500.
+OCR RENFORCE : petites images AGRANDIES x2 (LANCZOS) avant lecture,
+nettete UnsharpMask appliquee, deux passes de lecture EN PLUS
+(600 dpi pour les tout petits caracteres, et une passe photo sans
+binarisation). Fusion multi-lectures et validation humaine
+inchangees.
+v47 : PDF ORIGINAUX DURABLES (chantier pre-vente n°1) : bucket PRIVE
+Supabase Storage 'factures-pdf', chaque PDF dans le dossier de son
+proprietaire ({uuid}/{cle}.pdf), regles Storage dans le guide.
+sauver_pdf ecrit EN LOCAL + ENVOIE AU STORAGE (retour bool inchange :
+True si au moins une ecriture reussit ; avertissement sidebar
+'avert_pdf_cloud' si le Storage echoue). Nouvel expander « Mes PDF
+sauvegardes » dans le Recapitulatif pour re-telecharger un PDF.
+SQL 3 bis du guide A INSTALLER COTE SERVEUR. Les factures
+anterieures ne sont pas remontees automatiquement."""
 
 import re
 import io
@@ -60,7 +195,7 @@ import pandas as pd
 # --- OCR (Tesseract) : facultatif, installe si present ---
 try:
     import pytesseract
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps, ImageFilter
     CHEMIN_TESSERACT = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
     if os.path.exists(CHEMIN_TESSERACT):
         pytesseract.pytesseract.tesseract_cmd = CHEMIN_TESSERACT
@@ -105,12 +240,22 @@ def _redresser_image(image):
 def _preparer_image(png_bytes, binariser):
     """Nettoie l'image avant l'OCR : redressement si le scan est penché,
     niveaux de gris + contraste automatique, et si demandé binarisation
-    noir/blanc (efficace sur les scans ternes)."""
+    noir/blanc (efficace sur les scans ternes).
+    v46 : + agrandissement des petites images (photos de téléphone),
+    + netteté renforcée : Tesseract lit beaucoup mieux du texte fin."""
     image = Image.open(io.BytesIO(png_bytes))
     try:
         image = _redresser_image(image)
         image = image.convert("L")
+        # v46 : une photo de facture en basse résolution est AGRANDIE x2 :
+        # sans ça, les petits caractères sont illisibles pour l'OCR.
+        if image.width < 1600:
+            image = image.resize((image.width * 2, image.height * 2),
+                                 Image.LANCZOS)
         image = ImageOps.autocontrast(image)
+        # v46 : netteté (masque flou) — redonne du mordant aux bords de
+        # lettres, décisif sur les scans un peu flous.
+        image = image.filter(ImageFilter.UnsharpMask(radius=2, percent=120))
         if binariser:
             image = image.point(lambda x: 255 if x > 160 else 0)
     except Exception:
@@ -138,8 +283,12 @@ def _lire_page_ocr(page):
     moins bonne (l'IA les utilisera toutes : le HT peut être bien lu
     dans une lecture et le TTC dans une autre)."""
     essais = []
+    # v46 : deux passes EN PLUS — 600 dpi pour les tout petits caractères,
+    # et une passe "photo de téléphone" en niveaux de gris purs (sans
+    # binarisation, qui abîme parfois les photos).
     for dpi, binariser, psm in ((300, False, None), (300, True, 6),
-                                (400, True, 4), (500, True, 6)):
+                                (400, True, 4), (500, True, 6),
+                                (600, True, 4), (400, False, 6)):
         pix = page.get_pixmap(dpi=dpi)
         image = _preparer_image(pix.tobytes("png"), binariser)
         txt = _ocr_image(image, psm)
@@ -971,6 +1120,53 @@ def _sb_requete(methode, chemin, donnees=None, params=None, jeton=None):
     return r.json() if r.content else None
 
 
+# ---------- v47 : PDF ORIGINAUX DANS SUPABASE STORAGE (durables) ----------
+# Bucket PRIVE 'factures-pdf'. Chaque PDF vit dans le dossier de SON
+# proprietaire : {uuid}/{cle_facture}.pdf. Les regles Storage (donnees
+# dans le guide) n'autorisent un acces qu'au proprietaire du fichier :
+# meme une interface modifiee ne peut pas lire les PDF d'un autre.
+
+def _pdf_chemin_cloud(ligne):
+    """Chemin du PDF dans le bucket : {uuid}/{cle}.pdf (cles securisees)."""
+    base = re.sub(r"[^A-Za-z0-9_\-]", "_", _cle(ligne).replace("|", "_"))
+    return _uid_courant() + "/" + base[:120] + ".pdf"
+
+
+def _storage_requete(methode, chemin_objet, donnees=None):
+    """Appel vers Supabase Storage AVEC le jeton de l'utilisateur.
+    Retourne l'objet requests brut (ou None si la config est absente)."""
+    url, key = _cloud_config()
+    token = _session()["token"]
+    from urllib.parse import quote
+    chemin = "/storage/v1/object/factures-pdf/" + quote(chemin_objet, safe="/")
+    entetes = {"apikey": key, "Authorization": "Bearer " + token,
+               "Content-Type": "application/octet-stream", "x-upsert": "true"}
+    return requests.request(methode, url + chemin, headers=entetes,
+                            data=donnees, timeout=90)
+
+
+def cloud_pdf_envoyer(ligne, f):
+    """Envoie (ou remplace) le PDF original dans le Storage en ligne.
+    Retourne True si le serveur confirme l'ecriture."""
+    try:
+        r = _storage_requete("POST", _pdf_chemin_cloud(ligne), f.getvalue())
+        return r is not None and 200 <= r.status_code < 300
+    except Exception:
+        return False
+
+
+def cloud_pdf_telecharger(ligne):
+    """Recupere le PDF original depuis le Storage. Retourne les octets
+    du fichier, ou None si absent/inaccessible."""
+    try:
+        r = _storage_requete("GET", _pdf_chemin_cloud(ligne))
+        if r is not None and 200 <= r.status_code < 300:
+            return r.content
+    except Exception:
+        pass
+    return None
+
+
 def _cle(ligne):
     """Cle d'identification d'une facture (numero + fournisseur), pour
     dedoublonner lors de la fusion local + cloud et de la migration."""
@@ -978,16 +1174,16 @@ def _cle(ligne):
             str(ligne.get("Fournisseur", "")).lower().strip())
 
 
-# v28 : LIMITE DE 500 FACTURES PAR UTILISATEUR.
+# v28 puis v46 : LIMITE DE FACTURES PAR UTILISATEUR (1000 depuis la v46).
 # Une "facture" = UNE ligne validee du recapitulatif (fournisseur + numero).
 # Le nombre de pages ou de fichiers PDF ne compte PAS : un PDF de 3 pages
 # = 1 facture. Garde cote client ici + policy SQL cote serveur (voir le
 # mode d'emploi dans la sidebar) : meme une interface modifiee est bloquee.
-LIMITE_FACTURES = 500
+LIMITE_FACTURES = 1000
 
 
 def limite_atteinte(lignes=None):
-    """True si l'utilisateur a deja ses 500 factures."""
+    """True si l utilisateur a deja atteint sa limite de factures."""
     if lignes is None:
         lignes = st.session_state.get("recap") or []
     return len(lignes) >= LIMITE_FACTURES
@@ -1140,35 +1336,63 @@ def db_charger():
 
 
 def db_ajouter(ligne):
-    """Ajoute une facture. Retourne True si ajoute, False si la limite de
-    500 factures est atteinte (dans ce cas RIEN n'est enregistre)."""
+    """Ajoute une facture. Contrat de retour (v31, corrige le retour
+    trompeur de la v30) :
+      - False : limite de 1000 atteinte, OU ECHEC COMPLET (rien n'a ete
+        ecrit, ni en local ni en ligne) -> l'appelant DOIT le signaler.
+      - True  : au moins une sauvegarde a reussi.
+        En cas d'echec du cloud alors que le local a reussi, un
+        avertissement persistant est pose dans 'avert_persist'.
+    Comportement compatible avec tous les appels existants (bool)."""
     if limite_atteinte():
         return False
     uid = _uid_courant()
+    ok_local = False
     try:
         sqlite_ajouter(ligne, uid)   # copie locale de secours, marquee a ton UUID
-    except Exception:
-        pass
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_sqlite"] = str(e)[:150]
+    ok_cloud = None    # None = cloud non applicable (mode local ou non connecte)
     if _cloud_actif() and _session():
         try:
             cloud_ajouter(ligne)
+            ok_cloud = True
         except Exception as e:
+            ok_cloud = False
             if "session expiree" not in str(e):
                 st.session_state["erreur_cloud"] = str(e)[:200]
+    if not ok_local and ok_cloud is not True:
+        # RIEN n'a ete ecrit nulle part : echec complet, jamais un faux succes.
+        return False
+    if ok_cloud is False:
+        st.session_state["avert_persist"] = (
+            "Facture enregistrée en LOCAL seulement : la sauvegarde en ligne "
+            "a échoué. Sur Streamlit Cloud, le disque local est EFFACÉ à "
+            "chaque redéploiement — utilise le bouton 📤 (expander 🛡️) pour "
+            "l'envoyer en ligne dès que le service revient.")
     return True
 
 
 def db_remplacer_numero(ancien, nouveau):
+    """Remplace une facture. Retourne (ok_local, ok_cloud) — ok_cloud est
+    True quand le cloud n'est pas applicable (mode local). Les appelants
+    qui ignoraient le retour continuent de fonctionner a l'identique."""
     uid = _uid_courant()
+    ok_local = False
     try:
         sqlite_remplacer_numero(ancien, nouveau, uid)
-    except Exception:
-        pass
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_sqlite"] = str(e)[:150]
+    ok_cloud = True
     if _cloud_actif() and _session():
         try:
             cloud_remplacer_numero(ancien, nouveau)
         except Exception as e:
+            ok_cloud = False
             st.session_state["erreur_cloud"] = str(e)[:200]
+    return ok_local, ok_cloud
 
 
 def db_vider():
@@ -1185,16 +1409,24 @@ def db_vider():
 
 
 def db_supprimer(numero, fournisseur):
+    """Supprime une facture. Retourne (ok_local, ok_cloud) — ok_cloud est
+    True quand le cloud n'est pas applicable. Un faux succes n'est plus
+    possible : l'appelant peut verifier."""
     uid = _uid_courant()
+    ok_local = False
     try:
         sqlite_supprimer(numero, fournisseur, uid)
-    except Exception:
-        pass
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_sqlite"] = str(e)[:150]
+    ok_cloud = True
     if _cloud_actif() and _session():
         try:
             cloud_supprimer(numero, fournisseur)
         except Exception as e:
+            ok_cloud = False
             st.session_state["erreur_cloud"] = str(e)[:200]
+    return ok_local, ok_cloud
 
 
 def migrer_vers_supabase():
@@ -1226,86 +1458,213 @@ st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    .stApp {background: #0b0b0d;}
-    .block-container {padding-top: 1.4rem; max-width: 1150px; font-family: 'Inter', sans-serif;}
+    .stApp {background: linear-gradient(160deg, #1C1333 0%, #241A42 45%, #2B2050 100%);}
+    .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
     [data-testid="stHeader"] {background: transparent;}
-    .stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-    [data-testid="stCaptionContainer"] {color: #c9cdd6 !important;}
-    section[data-testid="stSidebar"] {background: #141418; border-right: 1px solid #23252c;}
-    section[data-testid="stSidebar"] * {color: #b8bcc8 !important;}
+    /* v41 : fond violet NUIT — les textes poses sur le fond deviennent
+    clairs ; les ecritures dans les cartes/champs restent NOIRES. */
+    .stApp, .stApp p, .stApp span, .stApp label, .stApp li {color: #D8D4E8 !important;}
+    [data-testid="stCaptionContainer"] {color: #D8D4E8 !important;}
+    section[data-testid="stSidebar"] {background: #221940; border-right: 1px solid #443163;}
+    section[data-testid="stSidebar"] * {color: #cfc9e0 !important;}
     /* ---- v29 : hero sobre, plus de degrade ---- */
     .hero {
-        background: #17171c; color: #e6e8ec;
-        border: 1px solid #26262e; border-left: 3px solid #d9b45b;
+        background: #2A2145; color: #F2F0FA;
+        border: 1px solid #3D2B5E; border-left: 3px solid #a78bfa;
         border-radius: 12px;
         padding: 1rem 1.4rem; margin-bottom: 1rem;
     }
-    .hero h1 {color: #e6e8ec; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px;}
-    .hero p {color: #8b90a0; margin: .35rem 0 0 0; font-size: .95rem;}
+    .hero h1 {color: #F2F0FA; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
+    .hero p.breadcrumb {color: #a99fc0; margin: 0 0 .25rem 0; font-size: .78rem;
+        text-transform: uppercase; letter-spacing: 1px;}
+    .hero p {color: #a99fc0; margin: .35rem 0 0 0; font-size: .95rem;}
     .etapes span {
-        display: inline-block; background: #15161b; color: #d9b45b; border: 1px solid #2a2d38;
+        display: inline-block; background: #2A2145; color: #a78bfa; border: 1px solid #4A3A72;
         border-radius: 8px; padding: .3rem .8rem; margin: .25rem .25rem 0 0;
         font-weight: 500; font-size: .85rem;
     }
     div[data-testid="stExpander"] {
-        border-radius: 12px; border: 1px solid #23252c; background: #15161b;
+        border-radius: 12px; border: 1px solid #3D2B5E; background: #2A2145;
         overflow: hidden;
     }
-    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #d7dae2 !important;}
-    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #b8bcc8 !important;}
+    div[data-testid="stExpander"] summary, div[data-testid="stExpander"] summary span {color: #E6E1F2 !important;}
+    div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {color: #CFC9E0 !important;}
     div[data-testid="stMetric"] {
-        background: #15161b; border: 1px solid #23252c; border-radius: 12px; padding: .9rem;
+        background: #2A2145; border: 1px solid #3D2B5E; border-radius: 12px; padding: .9rem;
     }
-    div[data-testid="stMetricLabel"] p {color: #8b90a0 !important;}
-    div[data-testid="stMetricValue"] {color: #e6e8ec !important;}
+    div[data-testid="stMetricLabel"] p {color: #a99fc0 !important;}
+    div[data-testid="stMetricValue"] {color: #F2F0FA !important;}
     .stButton > button {
-        background: #1b1d24; color: #d7dae2; border: 1px solid #2a2d38; border-radius: 8px;
+        background: #322652; color: #F2F0FA; border: 1px solid #4A3A72; border-radius: 8px;
     }
-    .stButton > button:hover {border-color: #d9b45b; color: #fff;}
+    .stButton > button:hover {border-color: #a78bfa; color: #F2F0FA;}
     .stButton > button[kind="primary"] {
-        /* v30 : bouton principal DORE, texte fonce pour un contraste AAA */
-        background: #d9b45b; color: #16130a; border: none; font-weight: 700;
+        /* v36 : bouton principal VIOLET, texte blanc */
+        background: #a78bfa; color: #FFFFFF; border: none; font-weight: 700;
     }
-    .stButton > button[kind="primary"]:hover {background: #e6c56d; color: #16130a;}
+    .stButton > button[kind="primary"]:hover {background: #9171e8; color: #FFFFFF;}
     .stDownloadButton > button {
-        background: #1b1d24; color: #d9b45b; border: 1px solid #2a2d38; border-radius: 8px;
+        background: #322652; color: #a78bfa; border: 1px solid #4A3A72; border-radius: 8px;
     }
-    .stDownloadButton > button:hover {border-color: #d9b45b; color: #fff;}
+    .stDownloadButton > button:hover {border-color: #a78bfa; color: #F2F0FA;}
     div[data-testid="stFileUploader"] {
-        border: 1.5px dashed #6b5a33; border-radius: 12px; padding: .7rem; background: #121318;
+        border: 1.5px dashed #a58fd8; border-radius: 12px; padding: .7rem; background: #322652;
     }
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #15161b;}
-    .stTabs [data-baseweb="tab"] {color: #8b90a0; font-weight: 600;}
-    .stTabs [data-baseweb="tab-highlight"] {background: #d9b45b;}
-    .stTabs [data-baseweb="tab"]:hover {color: #c9cdd6;}
-    hr {border-color: #23252c;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {background: #2A2145;}
+    .stTabs [data-baseweb="tab"] {color: #a99fc0; font-weight: 600;}
+    .stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
+    .stTabs [data-baseweb="tab"]:hover {color: #FFFFFF;}
+    hr {border-color: #3D2B5E;}
 
 /* ---- v21 : cartes KPI sobres ---- */
 .carte-kpi {
-    background: #15161b; border: 1px solid #23252c; border-radius: 12px;
+    background: #2A2145; border: 1px solid #3D2B5E; border-radius: 12px;
     padding: .8rem .9rem; text-align: center; height: 100%;
 }
-.carte-kpi .kpi-lib {color: #8b90a0; font-size: .78rem; font-weight: 600;
+.carte-kpi .kpi-lib {color: #a99fc0; font-size: .78rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
-.carte-kpi .kpi-val {color: #e6e8ec; font-size: 1.35rem; font-weight: 700;}
-.carte-kpi.vert {border-color: #1f4d33;}   .carte-kpi.vert .kpi-val {color: #57b98a;}
-.carte-kpi.orange {border-color: #4d3a1f;} .carte-kpi.orange .kpi-val {color: #c9a45c;}
-.carte-kpi.rouge {border-color: #4d201f;}  .carte-kpi.rouge .kpi-val {color: #d97777;}
-.carte-kpi.bleu {border-color: #2a2d38;}   .carte-kpi.bleu .kpi-val {color: #d9b45b;}
+.carte-kpi .kpi-val {color: #F2F0FA; font-size: 1.35rem; font-weight: 700;}
+.carte-kpi.vert {border-color: #bfe3d2;}   .carte-kpi.vert .kpi-val {color: #57e6a8;}
+.carte-kpi.orange {border-color: #f0dcbc;} .carte-kpi.orange .kpi-val {color: #ffb84d;}
+.carte-kpi.rouge {border-color: #f3ccd3;}  .carte-kpi.rouge .kpi-val {color: #ff7d90;}
+.carte-kpi.bleu {border-color: #4A3A72;}   .carte-kpi.bleu .kpi-val {color: #a78bfa;}
+
+/* ---- v32 : badges de statut arrondis, comme la maquette ---- */
+.badge {
+    display: inline-block; border-radius: 999px; padding: .18rem .7rem;
+    font-size: .74rem; font-weight: 600; letter-spacing: .3px;
+    margin: 0 .25rem .25rem 0; border: 1px solid transparent;
+}
+.badge.apayer   {background: rgba(209,138,42,.14); color: #ffb84d; border-color: rgba(209,138,42,.45);}
+.badge.partielle{background: rgba(138,111,240,.14); color: #b39dff; border-color: rgba(138,111,240,.45);}
+.badge.averif   {background: rgba(124,92,214,.12); color: #a78bfa; border-color: rgba(124,92,214,.45);}
+.badge.payee    {background: rgba(46,158,111,.12); color: #57e6a8; border-color: rgba(46,158,111,.45);}
+.badge.retard   {background: rgba(224,92,116,.12); color: #ff7d90; border-color: rgba(224,92,116,.45);}
 
 /* ---- v29 : sections de la sidebar, style discret ---- */
 .section-titre {
-    color: #8b90a0; font-weight: 600; font-size: .72rem;
-    letter-spacing: 1.2px; text-transform: uppercase;
+    color: #a78bfa !important; font-weight: 700; font-size: .72rem;
+    letter-spacing: 1.4px; text-transform: uppercase;
     margin: .65rem 0 .25rem 0;
-    border-bottom: 1px solid #23252c; padding-bottom: .3rem;
+    border-bottom: 1px solid #3D2B5E; padding-bottom: .3rem;
 }
-div[data-testid="stExpander"] summary:hover span {color: #fff !important;}
+.sidebar-note {
+    color: #a99fc0 !important; font-size: .74rem; margin: .3rem 0 0 0;
+}
+.sidebar-note strong {color: #a78bfa !important;}
+
+/* ---- v33 : finitions « trait pour trait » ---- */
+.marque {color: #a78bfa !important; font-weight: 800; font-size: 1rem;
+    letter-spacing: 2.5px; text-transform: uppercase; margin: 0 0 .2rem 0;}
+.stApp div[data-baseweb="input"], .stApp div[data-baseweb="select"] > div,
+.stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="base-input"] {
+    /* v38 : champs de saisie (email, mot de passe...) FORCES en blanc */
+    background-color: #322652 !important; border-color: #4A3A72 !important;
+    border-radius: 8px;
+}
+/* v44 : filet ULTIME — n'importe quelle case de saisie, quelle que
+   soit sa structure interne : fond gris #322652, texte NOIR
+   (color + webkit-text-fill-color pour navigateurs WebKit). */
+.stApp input, .stApp input[type="text"], .stApp input[type="password"],
+.stApp input[type="email"], .stApp input[type="number"],
+.stApp textarea, .stApp select {
+    background-color: #322652 !important;
+    color: #F2F0FA !important;
+    -webkit-text-fill-color: #F2F0FA !important;
+    caret-color: #F2F0FA !important;
+    border: 1px solid #4A3A72 !important;
+    border-radius: 8px;
+}
+.stApp input::placeholder {color: #8a8494 !important;}
+
+/* ---- v41 : lisibilite sur fond violet nuit ---- */
+/* boutons et bulles de chat gardent un texte NOIR sur fond clair */
+.stButton > button, .stButton > button *,
+.stDownloadButton > button, .stDownloadButton > button * {
+    color: #F2F0FA !important;
+}
+.stButton > button[kind="primary"], .stButton > button[kind="primary"] * {
+    color: #FFFFFF !important;
+}
+section[data-testid="stChatMessage"] p,
+section[data-testid="stChatMessage"] li,
+section[data-testid="stChatMessage"] span {
+    color: #CFC9E0 !important;
+}
+.stTabs [data-baseweb="tab"] {color: #cfc9e0 !important; font-weight: 600;}
+.stTabs [data-baseweb="tab"]:hover {color: #FFFFFF !important;}
+.stTabs [data-baseweb="tab-highlight"] {background: #a78bfa;}
+/* v41 : les zones CLAIRES de Streamlit gardent un texte noir */
+[data-testid="stAlert"] *, div[data-baseweb="toast"] * {color: #1a1a1a !important;}
+div[data-testid="stFileUploader"] * {color: #E8E4F2 !important;}
+section[data-testid="stChatMessage"] * {color: #CFC9E0 !important;}
+/* ---- v42 : sur les surfaces GRISES, ecritures 100 % NOIRES ---- */
+.hero *, div[data-testid="stExpander"] *,
+div[data-testid="stMetric"] * {color: #F2F0FA !important;}
+/* badges clairs sur fond sombre */
+.badge.apayer   {background: rgba(255,152,0,.16); color: #ffb84d; border-color: rgba(255,184,77,.5);}
+.badge.partielle{background: rgba(156,120,255,.16); color: #b39dff; border-color: rgba(179,157,255,.5);}
+.badge.averif   {background: rgba(167,139,250,.16); color: #a78bfa; border-color: rgba(167,139,250,.5);}
+.badge.payee    {background: rgba(87,230,168,.14); color: #57e6a8; border-color: rgba(87,230,168,.5);}
+.badge.retard   {background: rgba(255,125,144,.14); color: #ff7d90; border-color: rgba(255,125,144,.5);}
+
+/* ---- v39 : plus AUCUNE surface sombre, blancs assombris (confort
+     visuel pour un usage prolonge : 6 h/jour sur cet ecran) ---- */
+section[data-testid="stChatMessage"] {
+    background: #2A2145 !important; border: 1px solid #3D2B5E;
+    border-radius: 12px;
+}
+.stApp pre, .stApp div[data-testid="stCodeBlock"] {
+    background: #322652 !important; border: 1px solid #3D2B5E;
+    border-radius: 8px;
+}
+.stApp pre code, .stApp div[data-testid="stCodeBlock"] code {
+    color: #F2F0FA !important; background: transparent !important;
+}
+.stApp div[data-baseweb="input"] input, .stApp textarea {color: #F2F0FA !important;}
+[data-testid="stProgress"] > div {background: #2A2145; border-radius: 999px;}
+[data-testid="stProgress"] > div > div {background: #a78bfa;}
+div[data-testid="stDataFrame"] {border: 1px solid #3D2B5E; border-radius: 12px;}
+/* ---- v36 : cartes BLANCHES en relief doux sur fond lavande ---- */
+.hero, .carte-kpi, div[data-testid="stMetric"],
+div[data-testid="stExpander"], div[data-testid="stDataFrame"] {
+    box-shadow: 0 2px 12px rgba(124,92,214,.10);
+}
+div[data-testid="stExpander"] summary:hover span {color: #a78bfa !important;}
+/* ---- v32 : menu de la sidebar, style maquette ---- */
 section[data-testid="stSidebar"] div[role="radiogroup"] label {
-    padding: .28rem .5rem; border-radius: 9px; transition: background .15s;
+    padding: .42rem .6rem; border-radius: 8px; font-weight: 500;
+    letter-spacing: .8px; font-size: .78rem; text-transform: uppercase;
+    border-left: 3px solid transparent;
+    transition: background .15s;
 }
-section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #1b1d24;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: #2E2150;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+    background: #3A2B66; border-left: 3px solid #a78bfa;
+}
+section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"],
+section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] *,
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked),
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
+    color: #b39dff !important; font-weight: 600;
+}
+/* pastille ronde masquee : rend le menu aussi epure que la maquette */
+section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
+section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
 div[data-testid="stExpander"] {margin-bottom: .45rem;}
+/* ---- v35 : écriture normale, épurée (style « Contenu ») ---- */
+div[data-testid="stExpander"] summary span {
+    color: #1a1a1a !important; font-weight: 500; font-size: .87rem;
+}
+div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
+    color: #CFC9E0 !important; font-size: .87rem;
+    line-height: 1.6; font-weight: 400;
+}
+div[data-testid="stExpander"] strong {
+    color: #e4dcf5 !important; font-weight: 600;
+}
+section[data-testid="stSidebar"] div[data-testid="stExpander"] summary:hover span {color: #a78bfa !important;}
 
 
 /* ---- v21 : confort sur telephone ---- */
@@ -1316,18 +1675,30 @@ div[data-testid="stExpander"] {margin-bottom: .45rem;}
     .hero p {font-size: .88rem;}
     .etapes span {font-size: .78rem; padding: .3rem .6rem;}
     .carte-kpi .kpi-val {font-size: 1.15rem;}
-    section[data-testid="stSidebar"] {background: #0b0b0d;}
+    section[data-testid="stSidebar"] {background: #221940;}
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<div class="hero">
-  <h1>🧾 Factures IA</h1>
-  <p>Dépose tes factures PDF — l'IA les lit, les vérifie et suit tes paiements.</p>
-</div>
-""", unsafe_allow_html=True)
+# v32 : titre de page + fil d'Ariane, comme la maquette
+# (« Espace de travail / Mes factures »). La page vient de session_state :
+# le hero suit donc automatiquement la navigation.
+_TITRES_PAGES = {
+    "🏠 Tableau de bord": "Vue d'ensemble",
+    "📄 Factures PDF": "Mes factures",
+    "💰 Paiements": "Paiements",
+    "📋 Récapitulatif": "Comptabilité",
+    "🤖 Assistant": "Assistant IA",
+    "📤 Pour le comptable": "Exports comptables",
+    "❓ Aide": "Aide & réglages",
+}
+_page_hero = st.session_state.get("page_courante", "🏠 Tableau de bord")
+_titre_hero = _TITRES_PAGES.get(_page_hero, "Vue d'ensemble")
+st.markdown(
+    '<div class="hero"><p class="breadcrumb">Espace de travail&nbsp;/&nbsp;' +
+    _titre_hero + '</p><h1>' + _titre_hero + '</h1></div>',
+    unsafe_allow_html=True)
 
 # ============================================================
 # 7. SIDEBAR
@@ -1339,9 +1710,9 @@ if "recap" not in st.session_state:
     st.session_state["recap"] = db_charger()
 
 with st.sidebar:
-    st.markdown("### 🧾 Factures IA")
+    st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 30")
+    st.caption("Version 47")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -1489,9 +1860,35 @@ with st.sidebar:
         if st.button("🔄 Réessayer maintenant", key="btn_reessayer_cloud"):
             st.session_state.pop("erreur_cloud", None)
             st.rerun()
+    # v31 : avertissements de persistance et d'erreur locale/PDF
+    if st.session_state.get("avert_persist"):
+        st.warning("⚠️ " + str(st.session_state["avert_persist"]))
+        if st.button("✅ J'ai compris", key="btn_ok_persist"):
+            st.session_state.pop("avert_persist", None)
+            st.rerun()
+    if st.session_state.get("erreur_sqlite"):
+        st.error("⚠️ Erreur de la base locale : " + str(st.session_state["erreur_sqlite"]))
+        if st.button("🔄 Effacer ce message", key="btn_ok_sqlite"):
+            st.session_state.pop("erreur_sqlite", None)
+            st.rerun()
+    if st.session_state.get("avert_pdf_cloud"):
+        st.warning("⚠️ La facture est enregistrée, mais son PDF n'a PAS pu être "
+                   "envoyé dans la sauvegarde en ligne (Storage). Il n'existe "
+                   "que sur le disque local, EFFACÉ à chaque redéploiement. "
+                   "Vérifie que le bucket « factures-pdf » et ses règles "
+                   "(voir le guide) sont installés, puis redépose la facture.")
+        if st.button("✅ OK", key="btn_ok_pdf_cloud"):
+            st.session_state.pop("avert_pdf_cloud", None)
+            st.rerun()
+    if st.session_state.get("erreur_pdf"):
+        st.warning("⚠️ Le PDF de la dernière facture n'a PAS pu être conservé : "
+                   + str(st.session_state["erreur_pdf"]))
+        if st.button("✅ OK", key="btn_ok_pdf"):
+            st.session_state.pop("erreur_pdf", None)
+            st.rerun()
     st.divider()
 
-    st.markdown("### 🧭 Navigation")
+    # v33 : plus de titre « Navigation » — la maquette n'en a pas.
     # v28 : compteur de capacite, toujours visible
     nb_factures = len(st.session_state.get("recap") or [])
     reste_f = LIMITE_FACTURES - nb_factures
@@ -1504,7 +1901,7 @@ with st.sidebar:
         st.caption("🗂️ **" + str(nb_factures) + " / " + str(LIMITE_FACTURES) +
                    "** facture(s) enregistrée(s) · " + str(reste_f) +
                    " emplacement(s) libre(s) au maximum")
-    st.markdown('<p class="section-titre">Pilotage</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-titre">Espace de travail</p>', unsafe_allow_html=True)
 
     def _nav_a():
         st.session_state["page_courante"] = st.session_state["navigation_page"]
@@ -1515,6 +1912,14 @@ with st.sidebar:
     if "page_courante" not in st.session_state:
         st.session_state["page_courante"] = "🏠 Tableau de bord"
     page = st.session_state["page_courante"]
+    # v33 : libelles de navigation EXACTS de la maquette, sans emojis.
+    # format_func change seulement le TEXTE affiche : les valeurs (cles de
+    # pages) restent identiques, donc AUCUN if page == "..." a modifier.
+    def _libelle_page(cle):
+        if cle == "📄 Factures PDF":
+            return "Mes factures (" + str(nb_factures).zfill(2) + ")"
+        return _TITRES_PAGES.get(cle, cle)
+
     st.radio(
         "Choisir une page",
         ["🏠 Tableau de bord", "📄 Factures PDF", "💰 Paiements",
@@ -1522,8 +1927,11 @@ with st.sidebar:
         key="navigation_page",
         label_visibility="collapsed",
         on_change=_nav_a,
+        format_func=_libelle_page,
     )
-    st.markdown('<p class="section-titre">Aide &amp; exports</p>',
+    st.markdown('<p class="section-titre">Votre espace documentaire</p>',
+                unsafe_allow_html=True)
+    st.markdown('<p class="sidebar-note">Retrouvez vos documents et préparez vos exports comptables.</p>',
                 unsafe_allow_html=True)
     st.radio(
         "Choisir une page (suite)",
@@ -1531,18 +1939,17 @@ with st.sidebar:
         key="navigation_page_b",
         label_visibility="collapsed",
         on_change=_nav_b,
+        format_func=_libelle_page,
     )
     st.divider()
 
-    st.markdown('<p class="section-titre">🧪 Essais & lecture des scans</p>',
+    st.markdown('<p class="section-titre">Essais & lecture des scans</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("🧪 Factures d'exemple — teste en 30 secondes"):
-        st.markdown("Trois factures **réelles d'exemple**, dont une anglaise (USD) "
-                    "et une aux pièges classiques (TVA 8,5 %). Télécharge-les sur "
-                    "ton PC, dépose-les dans « 📄 Factures PDF », et regarde "
-                    "le moteur d'analyse extraire, vérifier et alerter : **HT + TVA = TTC**, "
-                    "champs manquants surlignés, zéro invention.")
+    with st.expander("Factures d'exemple"):
+        st.markdown("Trois factures d'exemple, dont une en anglais (USD) et une "
+                    "avec une TVA à 8,5 %. Télécharge-les, dépose-les dans la page "
+                    "Mes factures, et regarde ce que l'application en lit.")
         st.download_button("📄 1 : française classique",
                            facture_test_1(), file_name="facture_test_1.pdf", mime="application/pdf",
                            use_container_width=True)
@@ -1554,106 +1961,97 @@ with st.sidebar:
                            use_container_width=True)
     st.divider()
 
-    with st.expander("🔍 Lecture des factures scannées (OCR)"):
+    with st.expander("Lecture des factures scannées (OCR)"):
         if HAS_OCR:
-            st.success("✅ **OCR actif** — les PDF scannés et photos de factures "
-                       "sont lus automatiquement, avec redressement des pages "
-                       "penchées et correction des chiffres confondus (O ↔ 0).")
+            st.markdown("L'OCR est actif. Les PDF scannés et les photos de "
+                        "factures sont lus automatiquement, pages penchées "
+                        "redressées et chiffres confondus corrigés.")
         else:
-            st.markdown("""**L'OCR active la lecture des factures scannées**
-            (PDF image ou photo, sans texte lisible). Sans lui, seuls les
-            PDF texte fonctionnent.
+            st.markdown("""L'OCR permet de lire les factures scannées (PDF image
+            ou photo). Sans lui, seuls les PDF contenant du texte fonctionnent.
 
-            **🖥️ Sur ton PC (local)** — 3 étapes :
+            Sur ton PC :
             1. `py -m pip install pytesseract pillow`
             2. Installe Tesseract : https://github.com/UB-Mannheim/tesseract/wiki
-            (dans `C:\\Program Files\\Tesseract-OCR`, langues **French** + English)
-            3. **Relance l'application**
+            (dans `C:\\Program Files\\Tesseract-OCR`, langues French et English)
+            3. Relance l'application
 
-            **☁️ Sur Streamlit Cloud** — ajoute à la racine du dépôt un fichier
-            **`packages.txt`** contenant :""")
+            Sur Streamlit Cloud, ajoute à la racine du dépôt un fichier
+            `packages.txt` contenant :""")
             st.code("""tesseract-ocr
 tesseract-ocr-fra""", language="text")
             st.markdown("""puis ajoute `pytesseract` et `pillow` dans
-            **`requirements.txt`**. Après redéploiement, la mention
-            « ✅ OCR actif » doit apparaître ici. Tant qu'elle est absente,
-            les PDF scannés ne sont pas lus — les PDF texte, eux,
-            fonctionnent toujours.""")
+            `requirements.txt`. Après redéploiement, la mention
+            « OCR actif » apparaît ici.""")
 
-    st.markdown('<p class="section-titre">⚖️ Transparence : légal, données & comptes</p>',
+    st.markdown('<p class="section-titre">Transparence : légal, données & comptes</p>',
                 unsafe_allow_html=True)
 
-    with st.expander("⚖️ Mentions légales & confidentialité (lisez-moi)"):
-        st.markdown("""**⚠️ Ce qu'est Facture IA (et ce qu'elle n'est PAS)**
+    with st.expander("Mentions légales & confidentialité"):
+        st.markdown("""Ce qu'est Facture IA — et ce qu'elle n'est pas
 
-        Facture IA est un **outil d'aide à la saisie et au suivi des factures
-        reçues** (fournisseurs, paiements, exports). Ce n'est **ni un logiciel
-        comptable certifié, ni une plateforme agréée** de facturation
+        Facture IA est un outil d'aide à la saisie et au suivi des factures
+        reçues (fournisseurs, paiements, exports). Ce n'est ni un logiciel
+        comptable certifié, ni une plateforme agréée de facturation
         électronique au sens de l'article 289 bis du code général des
         impôts. Les informations affichées ne remplacent pas les conseils
         d'un expert-comptable.
 
-        ---
+        Mentions légales
 
-        **📄 Mentions légales**
+        - Éditeur : Sébastien LESQUELIN — [À COMPLÉTER : adresse, SIREN ou
+          numéro de micro-entreprise le cas échéant]
+        - Contact : [À COMPLÉTER : ton email de contact]
+        - Hébergement de l'application : Streamlit Cloud (Snowflake Inc.)
+        - Hébergement des données : Supabase (région Europe)
 
-        - **Éditeur** : Sébastien LESQUELIN — [À COMPLÉTER : adresse, SIREN
-          ou numéro de micro-entreprise le cas échéant]
-        - **Contact** : [À COMPLÉTER : ton email de contact]
-        - **Hébergement de l'application** : Streamlit Cloud (Snowflake Inc.)
-        - **Hébergement des données** : Supabase (région Europe)
+        Politique de confidentialité (RGPD)
 
-        ---
-
-        **🔒 Politique de confidentialité (RGPD)**
-
-        - **Données traitées** : ton adresse email, un mot de passe (jamais
-        stocké en clair : il est chiffré par Supabase Auth), et le **résumé
-        de tes factures** (fournisseur, n° de facture, dates, montants,
-        paiements). **Les PDF originaux ne sont jamais envoyés en ligne** :
-        ils restent uniquement sur ta propre machine.
-        - **Finalité** : te permettre de gérer tes factures. Aucune donnée
+        - Données traitées : ton adresse email, un mot de passe (jamais
+        stocké en clair : il est chiffré par Supabase Auth) et le résumé de
+        tes factures (fournisseur, numéro, dates, montants, paiements).
+        Les PDF originaux ne sont jamais envoyés en ligne : ils restent
+        sur ta propre machine.
+        - Finalité : te permettre de gérer tes factures. Aucune donnée
         n'est vendue, louée ou partagée avec des tiers.
-        - **Durée de conservation** : jusqu'à ta suppression des données
+        - Durée de conservation : jusqu'à ta suppression des données
         (bouton « Tout vider » dans le Récapitulatif) ou ta demande.
-        - **Sous-traitants techniques** : Supabase (base de données et
+        - Sous-traitants techniques : Supabase (base de données et
         comptes, région Europe) et Streamlit Cloud (hébergement du site).
-        - **Sécurité** : chaque compte n'accède qu'à ses propres données,
+        - Sécurité : chaque compte n'accède qu'à ses propres données,
         vérifié côté serveur (Supabase Auth + règles RLS).
-        - **Tes droits** (accès, rectification, export, suppression) :
-        exporte tes factures (CSV / Excel dans le Récapitulatif), supprime-les
+        - Tes droits (accès, rectification, export, suppression) : exporte
+        tes factures (CSV ou Excel dans le Récapitulatif), supprime-les
         (« Tout vider »), ou écris à [À COMPLÉTER : ton email de contact].
 
-        ---
-
-        **🧪 Cadre du test pilote**
+        Cadre du test pilote
 
         Accès sur invitation, nombre d'utilisateurs limité. En cas de
-        problème : [À COMPLÉTER : ton email]. Note bien : les données
-        saisies pendant le pilote sont **tes données** — fais des essais
-        avec de vraies copies mais garde tes factures importantes
-        sauvegardées ailleurs (export CSV).""")
+        problème : [À COMPLÉTER : ton email]. Les données saisies pendant
+        le pilote sont tes données : fais des essais avec de vraies copies,
+        mais garde tes factures importantes sauvegardées ailleurs
+        (export CSV).""")
 
-    with st.expander("🛡️ Confidentialité & sécurité des données"):
+    with st.expander("Confidentialité & sécurité des données"):
         if _cloud_actif():
-            st.markdown("""**Sauvegarde en ligne : ACTIVE ✅** — voici exactement
-            ce qui part en ligne, et ce qui reste chez toi :
+            st.markdown("""Sauvegarde en ligne active. Voici exactement ce qui
+            part en ligne, et ce qui reste chez toi :
 
-            - **Ce qui est enregistré en ligne** : uniquement le **résumé** de tes
-            factures validées (fournisseur, n°, dates, montants, paiements) dans
-            une base **Supabase** (Europe). Tes données survivent aux
-            redémarrages, aux redéploiements et te suivent sur tous tes appareils.
-            - **Ce qui ne quitte JAMAIS ta machine** : les **PDF originaux**.
-            Ils sont analysés localement puis supprimés du serveur d'hébergement.
-            - **Isolation par compte** : chaque facture est liée à l'identifiant
-            unique (UUID) de TON compte. Les règles RLS de Supabase, vérifiées
-            **côté serveur**, empêchent tout autre compte de lire, modifier ou
-            supprimer tes factures — et t'empêchent d'accéder à celles des autres.
-            - **Double sécurité** : une **copie locale** (`factures.db`) reste
-            sur la machine, marquée à ton UUID, comme sauvegarde de secours.
-            - **Bonne pratique** : ne mets jamais de secret ni de mot de passe
+            - Enregistré en ligne : uniquement le résumé de tes factures
+            validées (fournisseur, numéro, dates, montants, paiements) dans
+            une base Supabase (Europe). Tes données survivent aux
+            redémarrages et te suivent sur tous tes appareils.
+            - Ce qui ne quitte jamais ta machine : les PDF originaux. Ils
+            sont analysés localement puis supprimés du serveur.
+            - Isolation par compte : chaque facture est liée à l'identifiant
+            unique de ton compte. Les règles RLS de Supabase, vérifiées côté
+            serveur, empêchent tout autre compte de lire ou modifier tes
+            factures — et t'empêchent d'accéder à celles des autres.
+            - Double sécurité : une copie locale (factures.db) reste sur la
+            machine, marquée à ton identifiant, comme sauvegarde de secours.
+            - Bonne pratique : ne mets jamais de secret ni de mot de passe
             dans le code ou sur GitHub. Les clés vivent dans les Secrets
-            Streamlit, jamais dans l'application.""")
+            Streamlit.""")
             if _session():
                 if st.button("📤 Envoyer mes factures locales vers la sauvegarde en ligne",
                              key="btn_migrer_sb", use_container_width=True):
@@ -1674,43 +2072,47 @@ tesseract-ocr-fra""", language="text")
             else:
                 st.caption("Connecte-toi pour voir le bouton d'envoi de tes factures.")
         else:
-            st.markdown("""**Mode 100 % local** — tout est traité **sur la machine
-                        où l'application tourne** : les factures validées sont
-                        sauvegardées dans le fichier `factures.db` du dossier de
+            st.markdown("""Mode 100 % local : tout est traité sur la machine
+                        où l'application tourne. Les factures validées sont
+                        sauvegardées dans le fichier factures.db du dossier de
                         l'application. Aucun PDF, aucun montant, aucune donnée
                         n'est envoyé ailleurs.
 
-                        ⚠️ **À savoir si l'app est déployée sur Streamlit Cloud** :
-                        l'espace disque de Streamlit Cloud est **effacé à chaque
-                        redémarrage ou redéploiement** — ta base `factures.db` ne
-                        survivra donc PAS là-bas. Trois solutions, au choix :
+                        À savoir si l'app est déployée sur Streamlit Cloud :
+                        l'espace disque est effacé à chaque redémarrage ou
+                        redéploiement, ta base factures.db ne survivra donc
+                        pas là-bas. Trois solutions, au choix :
 
-                        - Active la **sauvegarde permanente Supabase** (guide
-                        complet dans l'expander ☁️ ci-dessous) ;
-                        - Lance l'application **en local** sur ta machine ;
-                        - **Exporte régulièrement** tes factures (CSV / Excel
+                        - Active la sauvegarde permanente Supabase (guide
+                        complet dans la section ci-dessous) ;
+                        - Lance l'application en local sur ta machine ;
+                        - Exporte régulièrement tes factures (CSV ou Excel
                         dans le Récapitulatif).""")
 
-    with st.expander("☁️ Activer les comptes & la sauvegarde en ligne — guide pas à pas"):
+    with st.expander("Comptes & sauvegarde en ligne — guide pas à pas"):
         st.markdown("""
-        Objectif : que tes factures **survivent sur Streamlit Cloud**, avec de
-        **vrais comptes séparés** (email + mot de passe + code de confirmation
-        à 6 chiffres). Pas besoin d'être développeur : chaque étape est
-        indépendante, aucune donnée n'est perdue en cours de route.
+        Objectif : que tes factures survivent sur Streamlit Cloud, avec de
+        vrais comptes séparés (email, mot de passe et code de confirmation à
+        6 chiffres). Chaque étape est indépendante, aucune donnée n'est
+        perdue en cours de route.
 
-        **1.** Crée un compte sur https://supabase.com puis un nouveau projet
-        (nom libre, ex. `factures-ia`, mot de passe fort, région Europe).
+        1. Crée un compte sur https://supabase.com puis un nouveau projet
+        (nom libre, ex. factures-ia, mot de passe fort, région Europe).
 
-        **2.** Dans Supabase → **Authentication → Providers** : vérifie que
-        **Email** est activé (c'est le cas par défaut). Puis dans
-        **Authentication → Sign Ups**, laisse **« Confirm email » ACTIVÉ** :
-        c'est ce qui envoie le code à 6 chiffres à chaque inscription.
-        Vérifie aussi dans **Authentication → Email Templates** →
-        « Confirm signup » que le message contient `{{ .Token }}`
-        (le code) — c'est le cas par défaut. Ne mets jamais
-        `{{ .ConfirmationURL }}`... si tu préfères le code, garde `{{ .Token }}`.
+        2. Dans Supabase, section Authentication puis Providers : vérifie que
+        Email est activé (c'est le cas par défaut). Dans Authentication puis
+        Sign Ups, laisse « Confirm email » activé : c'est ce qui envoie le
+        code à 6 chiffres à chaque inscription. Dans Authentication puis
+        Email Templates, onglet « Confirm signup », vérifie que le message
+        contient {{ .Token }} (le code) — c'est le cas par défaut.
 
-        **3.** Dans **SQL Editor**, colle ce code et clique sur *Run* :""")
+        3. Dans SQL Editor, colle ce code et clique sur Run :
+
+        Si tu avais déjà installé l'ancienne limite de 500 (v28),
+        exécute d'abord CETTE mise à jour (elle retire l'ancienne règle) :
+        """)
+        st.code("""drop policy if exists "limite_500_factures" on factures;""",
+                language="sql")
         st.code("""create table if not exists factures (
   id bigint generated by default as identity primary key,
   utilisateur text not null,
@@ -1727,16 +2129,16 @@ create policy "chacun les siennes" on factures
   using (auth.uid()::text = utilisateur)
   with check (auth.uid()::text = utilisateur);
 
--- v28 : LIMITE DE 500 FACTURES PAR COMPTE, appliquee COTE SERVEUR.
--- Une insertion au-dela de 500 est refusee par Supabase lui-meme :
+-- v28 puis v46 : LIMITE DE 1000 FACTURES PAR COMPTE, appliquee COTE SERVEUR.
+-- Une insertion au-dela de 1000 est refusee par Supabase lui-meme :
 -- modifier l'application ne suffit pas a contourner la limite.
-drop policy if exists "limite_500_factures" on factures;
+drop policy if exists "limite_1000_factures" on factures;
 
-create policy "limite_500_factures" on factures
+create policy "limite_1000_factures" on factures
   for insert to authenticated
   with check (
     (select count(*) from factures f
-     where f.utilisateur = auth.uid()::text) < 500
+     where f.utilisateur = auth.uid()::text) < 1000
   );
 
 -- v28 : MEMOIRE DE L'ASSISTANT (table 'conversations', protegee par RLS :
@@ -1757,52 +2159,65 @@ create policy "conversation privee" on conversations
   using (auth.uid()::text = utilisateur)
   with check (auth.uid()::text = utilisateur);""", language="sql")
         st.markdown("""
-        ⚠️ **Si tu avais déjà des factures en ligne** (mode avant comptes,
-        marquées `proprietaire`) : elles ne peuvent pas être réattribuées
-        depuis l'application. Colle ce code dans SQL Editor **après ta
-        première inscription** (remplace TON_EMAIL) — c'est ta migration :""")
+        Si tu avais déjà des factures en ligne (mode avant comptes, marquées
+        proprietaire) : elles ne peuvent pas être réattribuées depuis
+        l'application. Colle ce code dans SQL Editor après ta première
+        inscription (remplace TON_EMAIL) — c'est ta migration :""")
         st.code("""update factures
 set utilisateur = (select id from auth.users where email = 'TON_EMAIL')
 where utilisateur = 'proprietaire';""", language="sql")
         st.markdown("""
-        **4.** Dans Supabase → **Settings → API** : copie l'**URL** du projet
-        et la clé **anon / public** (jamais la clé `service_role`).
+        3 bis. TOUJOURS dans SQL Editor, colle ce second code (v47 :
+        il crée le stockage DURABLE des PDF originaux — bucket privé
+        « factures-pdf », accessible uniquement à son propriétaire) :""")
+        st.code("""insert into storage.buckets (id, name, public)
+values ('factures-pdf', 'factures-pdf', false)
+on conflict (id) do nothing;
 
-        **5.** Sur Streamlit Cloud → ton app → **Settings → Secrets**, colle :""")
+drop policy if exists "chacun ses pdf" on storage.objects;
+
+create policy "chacun ses pdf" on storage.objects
+  for all
+  using (bucket_id = 'factures-pdf' and owner::text = auth.uid()::text)
+  with check (bucket_id = 'factures-pdf' and owner::text = auth.uid()::text);""",
+                language="sql")
+        st.markdown("""
+        4. Dans Supabase, section Settings puis API : copie l'URL du projet
+        et la clé anon / public (jamais la clé service_role).
+
+        5. Sur Streamlit Cloud, dans Settings puis Secrets, colle :""")
         st.code("""[factures_ia]
 supabase_url = "https://TON-PROJET.supabase.co"
 supabase_key = "TA-CLE-ANON-PUBLIC"
 """, language="toml")
         st.markdown("""
-        **6.** **Redémarre l'application** : la barre latérale propose
-        « Se connecter » et « **Créer un compte** ». Crée ton compte, puis
-        utilise le bouton **📤** (expander 🛡️) pour envoyer tes factures
-        locales vers ton espace en ligne. Ton fichier `factures.db` local
-        est toujours conservé comme sauvegarde de secours.
+        6. Redémarre l'application : la barre latérale propose
+        « Se connecter » et « Créer un compte ». Crée ton compte, puis
+        utilise le bouton d'envoi (section Confidentialité) pour envoyer tes
+        factures locales vers ton espace en ligne. Ton fichier factures.db
+        local reste conservé comme sauvegarde de secours.
 
-        **Sécurité** : la clé anon reste dans les Secrets Streamlit, jamais
-        dans le code ni sur GitHub. Grâce à Supabase Auth + RLS, chaque
-        compte ne voit **que ses propres factures** — même si quelqu'un
+        Sécurité : la clé anon reste dans les Secrets Streamlit, jamais dans
+        le code ni sur GitHub. Grâce à Supabase Auth et aux règles RLS,
+        chaque compte ne voit que ses propres factures — même si quelqu'un
         modifie le code de l'application, le serveur Supabase refuse.
 
-        ---
-
-        **🧠 Activer l'assistant IA complet (facultatif)** : sur
-        https://platform.mistral.ai → crée un compte → **API Keys** →
-        génère une clé. Puis ajoute-la dans les Secrets Streamlit, sous
-        `[factures_ia]` :
+        Activer l'assistant IA complet (facultatif) : sur
+        https://platform.mistral.ai, crée un compte, puis dans API Keys,
+        génère une clé. Ajoute-la dans les Secrets Streamlit, sous
+        [factures_ia] :
 
         ```
         mistral_api_key = "TA-CLE-MISTRAL"
         ```
 
-        L'assistant 🤖 répond alors comme une vraie IA (questions sur tes
-        factures ET questions générales), avec repli automatique sur le
-        moteur local en cas de panne. ⚠️ Transparence : pour répondre sur
-        tes factures, leurs données sont envoyées à l'API Mistral (c'est
-        affiché sur la page Assistant). L'API est payante à l'usage mais
-        très peu coûteuse à ton volume ; sans clé, l'assistant local
-        fonctionne toujours, sans aucun envoi.""")
+        L'assistant répond alors comme une vraie IA (questions sur tes
+        factures et questions générales), avec repli automatique sur le
+        moteur local en cas de panne. Transparence : pour répondre sur tes
+        factures, leurs données sont envoyées à l'API Mistral (c'est affiché
+        sur la page Assistant). L'API est payante à l'usage mais très peu
+        coûteuse à ton volume ; sans clé, l'assistant local fonctionne
+        toujours, sans aucun envoi.""")
 
 # ============================================================
 # 8. TRAITEMENT
@@ -1891,15 +2306,30 @@ def _nom_pdf(ligne):
 
 
 def sauver_pdf(ligne, f):
-    """Copie le PDF original dans le dossier 'documents_factures' pour
-    pouvoir l'envoyer au comptable plus tard. Échoue silencieusement."""
+    """v47 : sauvegarde DUPLIQUEE du PDF original :
+    (1) copie locale 'documents_factures' (pour le pack comptable) ;
+    (2) envoi SUPABASE STORAGE (durable, survit aux redéploiements)
+    si l'utilisateur est connecte et le cloud actif.
+    Retourne True si AU MOINS une des deux ecritures reussit ; les
+    messages d'avertissement precis sont poses dans session_state."""
+    ok_local = False
     try:
         os.makedirs(DOCS, exist_ok=True)
         _, chemin = _nom_pdf(ligne)
         with open(chemin, "wb") as sortie:
             sortie.write(f.getvalue())
-    except Exception:
+        ok_local = True
+    except Exception as e:
+        st.session_state["erreur_pdf"] = str(e)[:150]
+    ok_cloud = False
+    if _cloud_actif() and _session():
+        ok_cloud = cloud_pdf_envoyer(ligne, f)
+        if not ok_cloud:
+            st.session_state["avert_pdf_cloud"] = True
+    else:
+        # mode local pur : pas d'avertissement, c'est le mode attendu
         pass
+    return ok_local or ok_cloud
 
 
 def _montant_paye(ligne):
@@ -2214,6 +2644,20 @@ def traiter_facture(f):
     }
     manquants = [c for c in CHAMPS if donnees.get(c) in (None, "")]
     alertes = verifier_coherence(analyse["ht"], analyse["tva"], analyse["ttc"], analyse["taux"])
+    # v32 : coherence des DATES — l'OCR confond souvent date de facture
+    # et date d'echeance, ou lit une annee aberrante. Aucune valeur
+    # n'est modifiee : on alerte seulement, la verification reste humaine.
+    d_f_ext = _date_depuis_txt(donnees.get("Date facture"))
+    d_e_ext = _date_depuis_txt(donnees.get("Date échéance"))
+    auj = datetime.date.today()
+    if d_f_ext and d_e_ext and d_e_ext < d_f_ext:
+        alertes.append("Date d'échéance (" + str(donnees["Date échéance"]) +
+                       ") antérieure à la date de facture (" + str(donnees["Date facture"]) +
+                       ") — les deux dates sont probablement inversées, vérifie-les.")
+    for _lib, _d in (("date de facture", d_f_ext), ("date d'échéance", d_e_ext)):
+        if _d and abs((_d - auj).days) > 3650:
+            alertes.append("La " + _lib + " lue (" + _d.strftime("%d/%m/%Y") +
+                           ") est à plus de 10 ans d'aujourd'hui — année probablement mal lue par l'OCR.")
     return {"donnees": donnees, "manquants": manquants, "alertes": alertes,
             "liste_taux": taux_tva_multiples(t), "methode": methode,
             "confiance": analyse["confiance"], "notes": analyse["notes"],
@@ -2270,6 +2714,20 @@ if page == "🏠 Tableau de bord":
         k6.markdown(_carte("💸 Reste à encaisser", _fm(reste_affiche), "orange"), unsafe_allow_html=True)
         k7.markdown(_carte("📊 Recouvrement", str(round(taux_rec, 1)).replace(".", ",") + " %"), unsafe_allow_html=True)
         k8.markdown(_carte("🚨 En retard", str(len(retards_d)), "rouge" if retards_d else ""), unsafe_allow_html=True)
+
+        # v32 : badges de statut arrondis, comme la maquette
+        nb_payees = sum(1 for l in st.session_state["recap"]
+                        if str(l.get("Payée ?", "")).upper() == "OUI")
+        nb_partielles = sum(1 for l in st.session_state["recap"]
+                            if _statut_paiement(l) == "Partiellement payée")
+        nb_apayer = len(st.session_state["recap"]) - nb_payees - nb_partielles
+        st.markdown(
+            '<span class="badge payee">Payée · ' + str(nb_payees) + '</span>' +
+            '<span class="badge partielle">Paiement partiel · ' + str(nb_partielles) + '</span>' +
+            '<span class="badge apayer">À payer · ' + str(nb_apayer) + '</span>' +
+            ('<span class="badge retard">En retard · ' + str(len(retards_d)) + '</span>'
+             if retards_d else ''),
+            unsafe_allow_html=True)
 
         if retards_d:
             with st.expander("🚨 Factures en retard (" + str(len(retards_d)) + ")",
@@ -2348,11 +2806,17 @@ if page == "📄 Factures PDF" and fichiers:
                 if doublon:
                     passees.append(r["f"].name + " (doublon)")
                     continue
-                if limite_atteinte(recap_actuel):   # v28 : 500 max
+                if limite_atteinte(recap_actuel):   # v46 : 1000 max
                     bloquees += 1
                     continue
-                db_ajouter(ligne)
-                sauver_pdf(ligne, r["f"])   # v17 : garde le PDF pour le comptable
+                if not db_ajouter(ligne):
+                    bloquees += 1
+                    passees.append(r["f"].name + " (échec de sauvegarde — réessaie)")
+                    continue
+                if not sauver_pdf(ligne, r["f"]):   # v17+v31 : PDF pour le comptable
+                    st.warning("⚠️ La facture est enregistrée mais son PDF n'a PAS pu "
+                               "être conservé : le pack comptable l'indiquera comme "
+                               "manquant. Garde l'original de ton côté.")
                 recap_actuel = recap_actuel + [ligne]
                 ajoutees += 1
             st.session_state["recap"] = db_charger()
@@ -2367,6 +2831,9 @@ if page == "📄 Factures PDF" and fichiers:
         f = r["f"]
         if r["illisible"]:
             with st.expander("📄 " + f.name + " — 🔴 illisible", expanded=False):
+                st.download_button("⬇️ PDF original : " + f.name, f.getvalue(),
+                                   file_name=f.name, mime="application/pdf",
+                                   key="dl_" + f.name)
                 if HAS_OCR:
                     st.error("Rien à lire dans ce PDF, même avec l'OCR. "
                              "Photo trop sombre, trop penchée ou mauvaise qualité ?")
@@ -2391,6 +2858,12 @@ if page == "📄 Factures PDF" and fichiers:
             if r["notes"]:
                 for note in r["notes"]:
                     st.info("🧠 **Analyse IA** : " + note)
+
+            # v33 : PDF original accessible directement dans la carte,
+            # a cote de ce que l'IA a lu et des champs a corriger.
+            st.download_button("⬇️ PDF original : " + f.name, f.getvalue(),
+                               file_name=f.name, mime="application/pdf",
+                               key="dl_" + f.name)
 
             df = pd.DataFrame([donnees], columns=CHAMPS).fillna("")
             df_corrige = st.data_editor(df, num_rows="fixed", key="ed_" + f.name,
@@ -2425,7 +2898,14 @@ if page == "📄 Factures PDF" and fichiers:
                          " » n° " + str(existante.get("N° facture")) +
                          " est déjà enregistrée. Vérifie que ce n'est pas la même.")
                 if st.button("♻️ C'est une correction : remplacer l'existante", key="maj_" + f.name):
-                    db_remplacer_numero(existante, ligne_candidate)
+                    ok_loc_r, ok_cld_r = db_remplacer_numero(existante, ligne_candidate)
+                    if not ok_loc_r and not ok_cld_r:
+                        st.error("⚠️ Remplacement NON enregistré : la sauvegarde a échoué. "
+                                 "Rien n'a été modifié.")
+                        st.stop()
+                    if not ok_cld_r:
+                        st.warning("Remplacement enregistré en LOCAL seulement "
+                                   "(sauvegarde en ligne en échec).")
                     st.session_state["recap"] = db_charger()
                     st.success("Facture mise à jour.")
                     st.rerun()
@@ -2439,15 +2919,21 @@ if page == "📄 Factures PDF" and fichiers:
                          disabled=bool(manquants or alertes) or limite_atteinte()):
                 ligne = {c: df_corrige.iloc[0][c] for c in CHAMPS}
                 if not db_ajouter(ligne):
-                    st.error("🚫 **Limite de " + str(LIMITE_FACTURES) + " factures atteinte.** "
-                             "Exporte puis supprime d'anciennes factures pour libérer de la place.")
+                    st.error("🚫 Enregistrement refusé : soit la limite de " +
+                             str(LIMITE_FACTURES) + " factures est atteinte, soit la " +
+                             "sauvegarde a échoué (local ET en ligne). Exporte puis " +
+                             "supprime d'anciennes factures pour libérer de la place, " +
+                             "ou réessaie dans quelques minutes.")
                     st.stop()
-                sauver_pdf(ligne, f)   # v17 : garde le PDF pour le comptable
+                if not sauver_pdf(ligne, f):   # v17+v31 : PDF pour le comptable
+                    st.warning("⚠️ La facture est enregistrée mais son PDF n'a PAS pu "
+                               "être conservé : le pack comptable l'indiquera comme "
+                               "manquant. Garde l'original de ton côté.")
                 st.session_state["recap"] = db_charger()
                 st.rerun()
 
-            # Diagnostic : texte lu par l'application
-            with st.expander("🔍 Diagnostic — texte lu par l'application"):
+            # v33 : ce que l'IA a lu, texte brut, cote a cote des champs
+            with st.expander("📖 Ce que l'IA a lu (texte brut)"):
                 st.caption("Copie-colle ce texte dans notre conversation si un champ est faux : "
                            "je corrige la règle de lecture.")
                 st.code(r.get("texte", "")[:4000], language="text")
@@ -2527,8 +3013,16 @@ if page == "💰 Paiements":
                                       "mode": mode_p, "note": note_p})
                         maj["Historique paiements"] = payes
                         maj["Montant payé"] = round(_montant_paye(cible) + montant_p, 2)
-                        db_remplacer_numero(cible, maj)
+                        ok_loc_p, ok_cld_p = db_remplacer_numero(cible, maj)
                         st.session_state["recap"] = db_charger()
+                        if not ok_loc_p and not ok_cld_p:
+                            st.error("⚠️ Paiement NON enregistré : la sauvegarde a "
+                                     "échoué (local ET en ligne). Réessaie — rien n'a été écrit.")
+                            st.stop()
+                        if not ok_cld_p:
+                            st.warning("Paiement enregistré en LOCAL seulement : "
+                                        "la sauvegarde en ligne a échoué. Envoie-le "
+                                        "avec 📤 quand le service revient.")
                         reste_apres = round(reste_p - montant_p, 2)
                         if reste_apres <= 0.005:
                             st.success("Paiement enregistré : la facture est soldée 💰")
@@ -2560,9 +3054,16 @@ if page == "💰 Paiements":
                 if cible_c:
                     maj2 = dict(cible_c[0])
                     maj2["Payée ?"] = "OUI"
-                    db_remplacer_numero(cible_c[0], maj2)
+                    ok_loc_c, ok_cld_c = db_remplacer_numero(cible_c[0], maj2)
+                    if not ok_loc_c and not ok_cld_c:
+                        st.error("⚠️ Confirmation NON enregistrée : la sauvegarde a "
+                                 "échoué. La facture n'a PAS été marquée payée — "
+                                 "réessaie.")
+                        st.stop()
                     st.session_state["recap"] = db_charger()
                     st.session_state.pop("solde_a_confirmer", None)
+                    if not ok_cld_c:
+                        st.warning("Confirmation enregistrée en LOCAL seulement.")
                     st.success("Facture confirmée payée ✔")
                     st.rerun()
                 else:
@@ -2594,7 +3095,13 @@ if page == "💰 Paiements":
                                  key="confirm_" + str(idx_h)):
                         maj = dict(l)
                         maj["Payée ?"] = "OUI"
-                        db_remplacer_numero(l, maj)
+                        ok_loc_h, ok_cld_h = db_remplacer_numero(l, maj)
+                        if not ok_loc_h and not ok_cld_h:
+                            st.error("⚠️ Confirmation NON enregistrée (échec de "
+                                     "sauvegarde). La facture n'est pas marquée payée.")
+                            st.stop()
+                        if not ok_cld_h:
+                            st.warning("Confirmation enregistrée en LOCAL seulement.")
                         st.session_state["recap"] = db_charger()
                         st.rerun()
                 # v18 : annuler le dernier paiement (erreur de saisie, chèque refusé...)
@@ -2610,7 +3117,13 @@ if page == "💰 Paiements":
                         # si la facture était confirmée payée, elle redevient à vérifier
                         if str(l.get("Payée ?", "")).upper() == "OUI":
                             maj_a["Payée ?"] = "NON"
-                        db_remplacer_numero(l, maj_a)
+                        ok_loc_a, ok_cld_a = db_remplacer_numero(l, maj_a)
+                        if not ok_loc_a and not ok_cld_a:
+                            st.error("⚠️ Annulation NON enregistrée (échec de sauvegarde) — "
+                                     "le paiement est toujours dans l'historique.")
+                            st.stop()
+                        if not ok_cld_a:
+                            st.warning("Annulation enregistrée en LOCAL seulement.")
                         st.session_state["recap"] = db_charger()
                         st.success("Dernier paiement annulé (" + str(dernier_a.get("montant")) +
                                    " " + str(dernier_a.get("mode", "")) + " du " +
@@ -2924,9 +3437,9 @@ if page == "❓ Aide":
         - **Aucun PDF** n'est jamais envoyé à l'IA : uniquement les résumés
         (fournisseur, n°, dates, montants, paiements).""")
 
-    with st.expander("🗂️ La limite de 500 factures"):
+    with st.expander("🗂️ La limite de 1000 factures"):
         st.markdown("""
-        - Chaque compte peut enregistrer jusqu'à **500 factures**. Une facture =
+        - Chaque compte peut enregistrer jusqu'à **1000 factures**. Une facture =
         **une ligne validée du récapitulatif** (un PDF de 3 pages compte pour
         1 facture ; un fichier renommé 10 fois compte aussi pour 1).
         - Le compteur dans le menu de gauche affiche toujours ta capacité
@@ -2995,7 +3508,34 @@ if page == "📋 Récapitulatif":
             df_affiche = df_affiche[masque]
             st.caption(str(len(df_affiche)) + " facture(s) trouvée(s) sur " + str(len(df_recap)) + ".")
 
-        # Marquer payee / non payee (confirmation humaine, historique preserve)
+        # PDF durables : re-téléchargement depuis le Storage en ligne
+        with st.expander("📄 Mes PDF sauvegardés (re-télécharger)") as _exp_pdf:
+            st.markdown("Tes PDF originaux sont conservés en ligne (Storage) et "
+                        "survivent aux redéploiements. Choisis une facture et "
+                        "re-télécharge son PDF quand tu veux.")
+            _intitules_pdf = [
+                str(l.get("Fournisseur", "?")) + " — n° " + str(l.get("N° facture", "?"))
+                for l in st.session_state["recap"]]
+            _choix_pdf = st.selectbox("Facture", _intitules_pdf,
+                                      key="choix_pdf_recap")
+            _ligne_pdf = st.session_state["recap"][_intitules_pdf.index(_choix_pdf)]
+            if _cloud_actif() and _session():
+                if st.button("⬇️ Re-télécharger ce PDF", key="btn_pdf_recap"):
+                    _octets = cloud_pdf_telecharger(_ligne_pdf)
+                    if _octets:
+                        st.download_button("💾 Enregistrer le PDF", _octets,
+                                           file_name=str(_ligne_pdf.get("Fournisseur", "facture"))
+                                           + "_" + str(_ligne_pdf.get("N° facture", "")) + ".pdf",
+                                           mime="application/pdf", key="dl_pdf_recap")
+                    else:
+                        st.warning("Ce PDF n'est pas dans la sauvegarde en ligne "
+                                   "(facture antérieure à la mise en place du "
+                                   "Storage, ou envoi échoué). Redépose-le depuis "
+                                   "« Mes factures » pour l'y envoyer.")
+            else:
+                st.caption("Connecte-toi (avec la sauvegarde en ligne active) pour "
+                           "re-télécharger tes PDF.")
+
         with st.expander("✅ Marquer une facture comme payée / non payée"):
             st.caption("Pour un paiement PARTIEL ou un historique détaillé, utilise la page "
                        "« 💰 Paiements ». Ici, « OUI » = confirmation que TOUT est payé.")
@@ -3013,7 +3553,12 @@ if page == "📋 Récapitulatif":
                         ttc_paye = _val(maj.get("Montant TTC"))
                         maj["Montant payé"] = (round(ttc_paye, 2) if ttc_paye is not None
                                                else round(_montant_paye(maj), 2))
-                    db_remplacer_numero(cible[0], maj)
+                    ok_loc_x, ok_cld_x = db_remplacer_numero(cible[0], maj)
+                    if not ok_loc_x and not ok_cld_x:
+                        st.error("⚠️ Modification NON enregistrée (échec de sauvegarde).")
+                        st.stop()
+                    if not ok_cld_x:
+                        st.warning("Modification enregistrée en LOCAL seulement.")
                     st.session_state["recap"] = db_charger()
                     st.success("Facture " + num_paye + " → " + nouvel_etat)
                     st.rerun()
@@ -3080,10 +3625,17 @@ if page == "📋 Récapitulatif":
                         cible = [r for r in st.session_state["recap"]
                                  if str(r.get("N° facture", "")).upper() == num_suppr.strip().upper()]
                         if cible:
-                            db_supprimer(num_suppr.strip(), cible[0].get("Fournisseur", ""))
-                            st.session_state["recap"] = db_charger()
-                            st.success("Facture " + num_suppr + " supprimée.")
-                            st.rerun()
+                            ok_loc_s, ok_cld_s = db_supprimer(num_suppr.strip(),
+                                                              cible[0].get("Fournisseur", ""))
+                            if not ok_loc_s and not ok_cld_s:
+                                st.error("⚠️ Suppression NON enregistrée : la sauvegarde "
+                                         "a échoué. La facture est toujours là — réessaie.")
+                            else:
+                                if not ok_cld_s:
+                                    st.warning("Suppression enregistrée en LOCAL seulement.")
+                                st.session_state["recap"] = db_charger()
+                                st.success("Facture " + num_suppr + " supprimée.")
+                                st.rerun()
                         else:
                             st.warning("Aucune facture avec ce numéro.")
                     else:
@@ -3101,4 +3653,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 30 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 47 · " + datetime.date.today().strftime("%d/%m/%Y"))
