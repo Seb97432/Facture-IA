@@ -1496,6 +1496,15 @@ section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {color: va
 div[data-testid="stExpander"] {background: var(--carte); border: 1px solid var(--bord); border-radius: 12px;
     box-shadow: 0 1px 4px rgba(91,63,181,.07); margin-bottom: .45rem;}
 div[data-testid="stExpander"] summary span {color: var(--texte) !important; font-weight: 500; font-size: .92rem;}
+/* v48 : fleches des accordeons masquees (demande de l'auteur) — filet
+   large : quelle que soit la version de Streamlit, l'icone (svg) et la
+   petite colonne qui la contient disparaissent, seul le titre reste. */
+div[data-testid="stExpander"] summary svg {display: none !important;}
+div[data-testid="stExpander"] summary [data-testid="stExpanderToggleIcon"],
+div[data-testid="stExpander"] summary [aria-hidden="true"],
+div[data-testid="stExpander"] summary > div:first-child:not(:last-child) {display: none !important;}
+div[data-testid="stExpander"] details > summary > *:first-child {display: none !important;}
+div[data-testid="stExpander"] summary p, div[data-testid="stExpander"] summary span {margin-left: 0 !important;}
 div[data-testid="stExpander"] summary:hover span {color: var(--lav-fonce) !important;}
 div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
     color: var(--texte) !important; font-weight: 400; font-size: .87rem; line-height: 1.6;}
