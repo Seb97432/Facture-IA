@@ -2178,8 +2178,8 @@ drop policy if exists "chacun ses pdf" on storage.objects;
 
 create policy "chacun ses pdf" on storage.objects
   for all
-  using (bucket_id = 'factures-pdf' and owner = auth.uid()::text)
-  with check (bucket_id = 'factures-pdf' and owner = auth.uid()::text);""",
+  using (bucket_id = 'factures-pdf' and owner::text = auth.uid()::text)
+  with check (bucket_id = 'factures-pdf' and owner::text = auth.uid()::text);""",
                 language="sql")
         st.markdown("""
         4. Dans Supabase, section Settings puis API : copie l'URL du projet
@@ -3510,31 +3510,31 @@ if page == "📋 Récapitulatif":
 
         # Marquer payee / non payee (confirmation humaine, historique preserve)
         with st.expander("📄 Mes PDF sauvegardés (re-télécharger)") as _exp_pdf:
-        st.markdown("Tes PDF originaux sont conservés en ligne (Storage) et "
-                    "survivent aux redéploiements. Choisis une facture et "
-                    "re-télécharge son PDF quand tu veux.")
-        _intitules_pdf = [
-            str(l.get("Fournisseur", "?")) + " — n° " + str(l.get("N° facture", "?"))
-            for l in st.session_state["recap"]]
-        _choix_pdf = st.selectbox("Facture", _intitules_pdf,
-                                  key="choix_pdf_recap")
-        _ligne_pdf = st.session_state["recap"][_intitules_pdf.index(_choix_pdf)]
-        if _cloud_actif() and _session():
-            if st.button("⬇️ Re-télécharger ce PDF", key="btn_pdf_recap"):
-                _octets = cloud_pdf_telecharger(_ligne_pdf)
-                if _octets:
-                    st.download_button("💾 Enregistrer le PDF", _octets,
-                                       file_name=str(_ligne_pdf.get("Fournisseur", "facture"))
-                                       + "_" + str(_ligne_pdf.get("N° facture", "")) + ".pdf",
-                                       mime="application/pdf", key="dl_pdf_recap")
-                else:
-                    st.warning("Ce PDF n'est pas dans la sauvegarde en ligne "
-                               "(facture antérieure à la mise en place du "
-                               "Storage, ou envoi échoué). Redépose-le depuis "
-                               "« Mes factures » pour l'y envoyer.")
-        else:
-            st.caption("Connecte-toi (avec la sauvegarde en ligne active) pour "
-                       "re-télécharger tes PDF.")
+            st.markdown("Tes PDF originaux sont conservés en ligne (Storage) et "
+                        "survivent aux redéploiements. Choisis une facture et "
+                        "re-télécharge son PDF quand tu veux.")
+            _intitules_pdf = [
+                str(l.get("Fournisseur", "?")) + " — n° " + str(l.get("N° facture", "?"))
+                for l in st.session_state["recap"]]
+            _choix_pdf = st.selectbox("Facture", _intitules_pdf,
+                                      key="choix_pdf_recap")
+            _ligne_pdf = st.session_state["recap"][_intitules_pdf.index(_choix_pdf)]
+            if _cloud_actif() and _session():
+                if st.button("⬇️ Re-télécharger ce PDF", key="btn_pdf_recap"):
+                    _octets = cloud_pdf_telecharger(_ligne_pdf)
+                    if _octets:
+                        st.download_button("💾 Enregistrer le PDF", _octets,
+                                           file_name=str(_ligne_pdf.get("Fournisseur", "facture"))
+                                           + "_" + str(_ligne_pdf.get("N° facture", "")) + ".pdf",
+                                           mime="application/pdf", key="dl_pdf_recap")
+                    else:
+                        st.warning("Ce PDF n'est pas dans la sauvegarde en ligne "
+                                   "(facture antérieure à la mise en place du "
+                                   "Storage, ou envoi échoué). Redépose-le depuis "
+                                   "« Mes factures » pour l'y envoyer.")
+            else:
+                st.caption("Connecte-toi (avec la sauvegarde en ligne active) pour "
+                           "re-télécharger tes PDF.")
 
     with st.expander("✅ Marquer une facture comme payée / non payée"):
             st.caption("Pour un paiement PARTIEL ou un historique détaillé, utilise la page "
