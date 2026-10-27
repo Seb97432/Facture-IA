@@ -170,7 +170,13 @@ True si au moins une ecriture reussit ; avertissement sidebar
 'avert_pdf_cloud' si le Storage echoue). Nouvel expander « Mes PDF
 sauvegardes » dans le Recapitulatif pour re-telecharger un PDF.
 SQL 3 bis du guide A INSTALLER COTE SERVEUR. Les factures
-anterieures ne sont pas remontees automatiquement."""
+anterieures ne sont pas remontees automatiquement.
+v48 : THEME MAUVE CLAIR (demande de l'auteur : blanc plus
+sombre, tout ce qui est gris devient mauve clair, ecritures
+noires coherentes). Fond en degrade mauve clair, surfaces
+(cartes/accordeons/metriques/bulles/hero) en blanc assombri
+teinte mauve, cases un ton plus clair, textes gris passes en
+mauve. Aucune logique modifiee : uniquement du CSS."""
 
 import re
 import io
@@ -1450,91 +1456,133 @@ def migrer_vers_supabase():
     return envoyees, len(cloud)
 
 
-# 6. DESIGN - THEME LAVANDE & BLANC (v48)
+# 6. DESIGN - THEME MAUVE CLAIR (v48)
 # ============================================================
+# v48 : MAUVE CLAIR harmonieux. Le fond passe en degrade mauve
+# clair, les surfaces (cartes, accordeons, metriques, bulles) en
+# BLANC ASSOMBRRI teinte mauve, les cases un ton plus clair, et
+# TOUT ce qui etait gris devient MAUVE. Ecritures NOIRES partout,
+# coherentes. Aucune logique modifiee : uniquement du CSS.
 
 st.set_page_config(page_title="Factures IA", page_icon="🧾", layout="wide")
 
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-/* v48 : THEME LAVANDE & BLANC — palette : #B7A2E8 (principal), #E8E1F7 (clair), #FFFFFF, #24212B (texte). Aucune logique modifiee. */
-:root {--lav:#B7A2E8; --lav-clair:#E8E1F7; --blanc:#FFFFFF; --texte:#24212B; --texte-doux:#5E5870; --bord:#DCD3F2;}
-.stApp {background: var(--blanc);}
+:root {--lav:#7C5CD6; --lav-fonce:#5B3FB5; --lav-clair:#E0D5F2; --fond:#E7E0F4;
+    --carte:#F0EBF9; --case:#F7F3FD; --texte:#141414; --texte-doux:#6B5B8F; --bord:#CDBDE8;}
+/* ---- Fond general : degrade MAUVE CLAIR (plus de blanc/gris) ---- */
+.stApp {background: linear-gradient(160deg, #E7E0F4 0%, #E1D8F1 55%, #DCD1EE 100%);}
 .block-container {padding-top: 1.2rem; max-width: 1400px; font-family: 'Inter', sans-serif;}
 [data-testid="stHeader"] {background: transparent;}
-.stApp, .stApp p, .stApp span, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3 {color: var(--texte) !important; font-family: 'Inter', sans-serif;}
+.stApp, .stApp p, .stApp span, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3 {
+    color: var(--texte) !important; font-family: 'Inter', sans-serif;}
 [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * {color: var(--texte-doux) !important;}
-section[data-testid="stSidebar"] {background: var(--lav-clair); border-right: 1px solid var(--bord);}
+/* ---- Sidebar : mauve clair, texte noir ---- */
+section[data-testid="stSidebar"] {background: #E3D8F3; border-right: 1px solid var(--bord);}
 section[data-testid="stSidebar"] * {color: var(--texte) !important;}
-.hero {background: var(--blanc); border: 1px solid var(--bord); border-left: 4px solid var(--lav); border-radius: 12px;
-    padding: 1rem 1.4rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(36,33,43,.06);}
-.hero h1 {margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
-.hero p.breadcrumb {color: var(--texte-doux) !important; margin: 0 0 .25rem 0; font-size: .78rem; text-transform: uppercase; letter-spacing: 1px;}
-.hero p {margin: .35rem 0 0 0; font-size: .95rem;}
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {color: var(--texte-doux) !important;}
+/* ---- Hero / fil d'Ariane ---- */
+.hero {background: var(--carte); border: 1px solid var(--bord); border-left: 4px solid var(--lav);
+    border-radius: 12px; padding: 1rem 1.4rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(91,63,181,.08);}
+.hero h1 {color: var(--texte) !important; margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.2px;}
+.hero p.breadcrumb {color: var(--texte-doux) !important; margin: 0 0 .25rem 0; font-size: .78rem;
+    text-transform: uppercase; letter-spacing: 1px;}
+.hero p {color: var(--texte) !important; margin: .35rem 0 0 0; font-size: .95rem;}
 .etapes span {display: inline-block; background: var(--lav-clair); border: 1px solid var(--bord); border-radius: 8px;
-    padding: .3rem .8rem; margin: .25rem .25rem 0 0; font-weight: 500; font-size: .85rem;}
-div[data-testid="stExpander"] {background: var(--blanc); border: 1px solid var(--bord); border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(36,33,43,.05); margin-bottom: .45rem;}
-div[data-testid="stExpander"] summary span {font-weight: 500; font-size: .92rem;}
-div[data-testid="stExpander"] summary:hover span {color: #6B4FC4 !important;}
-div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {font-weight: 400; font-size: .87rem; line-height: 1.6;}
-div[data-testid="stMetric"] {background: var(--blanc); border: 1px solid var(--bord); border-radius: 12px; padding: .8rem .9rem;
-    box-shadow: 0 1px 4px rgba(36,33,43,.05);}
+    padding: .3rem .8rem; margin: .25rem .25rem 0 0; font-weight: 500; font-size: .85rem; color: var(--texte) !important;}
+/* ---- Accordeons : BLANC ASSOMBRRI mauve ---- */
+div[data-testid="stExpander"] {background: var(--carte); border: 1px solid var(--bord); border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(91,63,181,.07); margin-bottom: .45rem;}
+div[data-testid="stExpander"] summary span {color: var(--texte) !important; font-weight: 500; font-size: .92rem;}
+div[data-testid="stExpander"] summary:hover span {color: var(--lav-fonce) !important;}
+div[data-testid="stExpander"] p, div[data-testid="stExpander"] li {
+    color: var(--texte) !important; font-weight: 400; font-size: .87rem; line-height: 1.6;}
+section[data-testid="stSidebar"] div[data-testid="stExpander"] {background: var(--carte);}
+/* ---- Metriques ---- */
+div[data-testid="stMetric"] {background: var(--carte); border: 1px solid var(--bord); border-radius: 12px;
+    padding: .8rem .9rem; box-shadow: 0 1px 4px rgba(91,63,181,.07);}
 div[data-testid="stMetric"] * {color: var(--texte) !important;}
 div[data-testid="stMetricLabel"] p {color: var(--texte-doux) !important;}
-.stButton > button, .stDownloadButton > button {background: var(--blanc); border: 1px solid var(--lav); border-radius: 10px;
-    font-weight: 600; min-height: 2.6rem;}
+/* ---- Boutons ---- */
+.stButton > button, .stDownloadButton > button {background: var(--carte); border: 1px solid var(--lav);
+    border-radius: 10px; font-weight: 600; min-height: 2.6rem;}
 .stButton > button *, .stDownloadButton > button * {color: var(--texte) !important;}
 .stButton > button:hover, .stDownloadButton > button:hover {background: var(--lav-clair); border-color: var(--lav);}
-.stButton > button[kind="primary"] {background: var(--lav); border: 1px solid var(--lav); color: var(--texte);}
-.stButton > button[kind="primary"] * {color: var(--texte) !important;}
-.stButton > button[kind="primary"]:hover {background: #A68DE0;}
-.stButton > button:focus-visible, .stApp input:focus-visible, .stApp textarea:focus-visible {outline: 2px solid #6B4FC4; outline-offset: 2px;}
+.stButton > button[kind="primary"] {background: var(--lav); border: 1px solid var(--lav);}
+.stButton > button[kind="primary"] * {color: #FFFFFF !important;}
+.stButton > button[kind="primary"]:hover {background: var(--lav-fonce);}
+.stButton > button:focus-visible, .stApp input:focus-visible, .stApp textarea:focus-visible {
+    outline: 2px solid var(--lav-fonce); outline-offset: 2px;}
+/* ---- Zone de depot ---- */
 div[data-testid="stFileUploader"] {background: var(--lav-clair); border: 1px dashed var(--lav); border-radius: 12px;}
 div[data-testid="stFileUploader"] * {color: var(--texte) !important;}
 div[data-testid="stFileUploader"] section {background: var(--lav-clair);}
+/* ---- Onglets ---- */
 .stTabs [data-baseweb="tab"] {color: var(--texte-doux) !important; font-weight: 600;}
 .stTabs [aria-selected="true"] {color: var(--texte) !important;}
 .stTabs [data-baseweb="tab-highlight"] {background: var(--lav);}
-.stApp div[data-baseweb="input"], .stApp div[data-baseweb="base-input"], .stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="select"] > div {
-    background: var(--blanc) !important; border: 1px solid var(--bord) !important; border-radius: 10px !important;}
-.stApp input, .stApp textarea, .stApp select {background: var(--blanc) !important; color: var(--texte) !important;
+/* ---- Cases (inputs, textarea, select) : un ton PLUS CLAIR que les cartes,
+     texte NOIR force (color + -webkit-text-fill-color + caret) ---- */
+.stApp div[data-baseweb="input"], .stApp div[data-baseweb="base-input"],
+.stApp div[data-baseweb="textarea"], .stApp div[data-baseweb="select"] > div {
+    background: var(--case) !important; border: 1px solid var(--bord) !important; border-radius: 10px !important;}
+.stApp input, .stApp textarea, .stApp select {background: var(--case) !important; color: var(--texte) !important;
     -webkit-text-fill-color: var(--texte) !important; caret-color: var(--texte) !important;}
-.stApp input::placeholder, .stApp textarea::placeholder {color: #7A7388 !important; -webkit-text-fill-color: #7A7388 !important;}
-[data-testid="stAlert"] * , div[data-baseweb="toast"] * {color: var(--texte) !important;}
-section[data-testid="stChatMessage"], div[data-testid="stChatMessage"] {background: var(--lav-clair); border: 1px solid var(--bord); border-radius: 12px;}
+.stApp input::placeholder, .stApp textarea::placeholder {color: #8A7BB0 !important; -webkit-text-fill-color: #8A7BB0 !important;}
+/* ---- Alertes et toasts : texte NOIR lisible sur fond clair d'origine ---- */
+[data-testid="stAlert"] *, div[data-baseweb="toast"] * {color: #1a1a1a !important;}
+/* ---- Bulles de chat ---- */
+section[data-testid="stChatMessage"], div[data-testid="stChatMessage"] {background: var(--carte);
+    border: 1px solid var(--bord); border-radius: 12px;}
 div[data-testid="stChatMessage"] * {color: var(--texte) !important;}
-.stApp pre, .stApp div[data-testid="stCodeBlock"] {background: var(--lav-clair) !important; border: 1px solid var(--bord); border-radius: 10px;}
+/* ---- Blocs de code : mauve clair, code noir ---- */
+.stApp pre, .stApp div[data-testid="stCodeBlock"] {background: var(--lav-clair) !important;
+    border: 1px solid var(--bord); border-radius: 10px;}
 .stApp pre code, .stApp div[data-testid="stCodeBlock"] code {color: var(--texte) !important; background: transparent !important;}
+/* ---- Progression ---- */
 [data-testid="stProgress"] > div {background: var(--lav-clair); border-radius: 999px;}
 [data-testid="stProgress"] > div > div {background: var(--lav);}
-div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {border: 1px solid var(--bord); border-radius: 12px; background: var(--blanc);}
+/* ---- Tableaux : fond MAUVE CLAIR (plus de blanc/gris), bordures mauves ---- */
+div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {border: 1px solid var(--bord);
+    border-radius: 12px; background: var(--carte);}
+div[data-testid="stDataFrame"] *, div[data-testid="stDataEditor"] * {color: var(--texte) !important;}
+/* ---- Navigation sidebar ---- */
 section[data-testid="stSidebar"] div[role="radiogroup"] {gap: .15rem;}
-section[data-testid="stSidebar"] div[role="radiogroup"] label {border-radius: 10px; padding: .5rem .7rem; width: 100%; font-weight: 500; min-height: 2.5rem;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label {border-radius: 10px; padding: .5rem .7rem;
+    width: 100%; font-weight: 500; min-height: 2.5rem;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {background: rgba(255,255,255,.7);}
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {background: var(--lav);}
-section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {color: var(--texte) !important; font-weight: 700;}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) * {
+    color: #FFFFFF !important; font-weight: 700;}
 section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {visibility: hidden;}
-section[data-testid="stSidebar"] div[data-testid="stExpander"] {background: var(--blanc);}
-.carte-kpi {background: var(--blanc); border: 1px solid var(--bord); border-radius: 12px; padding: .8rem .9rem; text-align: center; height: 100%;
-    box-shadow: 0 1px 4px rgba(36,33,43,.05);}
-.carte-kpi .kpi-lib {color: var(--texte-doux) !important; font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
+/* ---- Cartes KPI (html) ---- */
+.carte-kpi {background: var(--carte); border: 1px solid var(--bord); border-radius: 12px;
+    padding: .8rem .9rem; text-align: center; height: 100%; box-shadow: 0 1px 4px rgba(91,63,181,.07);}
+.carte-kpi .kpi-lib {color: var(--texte-doux) !important; font-size: .78rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .4px; margin-bottom: .3rem;}
 .carte-kpi .kpi-val {color: var(--texte) !important; font-size: 1.35rem; font-weight: 700;}
 .carte-kpi.vert {border-top: 3px solid #4CAF8A;}   .carte-kpi.vert .kpi-val {color: #1F7A57 !important;}
 .carte-kpi.orange {border-top: 3px solid #E0A14A;} .carte-kpi.orange .kpi-val {color: #9A5F0A !important;}
 .carte-kpi.rouge {border-top: 3px solid #E27A8C;}  .carte-kpi.rouge .kpi-val {color: #B3263F !important;}
-.carte-kpi.bleu {border-top: 3px solid var(--lav);} .carte-kpi.bleu .kpi-val {color: #5B3FB5 !important;}
-.badge {display: inline-block; border-radius: 999px; padding: .18rem .7rem; font-size: .76rem; font-weight: 600; margin: 0 .25rem .25rem 0; border: 1px solid transparent;}
-.badge.apayer   {background: #FFF1DC; color: #8A5200 !important; border-color: #F0D3A0;}
-.badge.partielle{background: var(--lav-clair); color: #4A2FA0 !important; border-color: var(--lav);}
-.badge.averif   {background: var(--lav-clair); color: #4A2FA0 !important; border-color: var(--bord);}
-.badge.payee    {background: #E1F4EA; color: #176244 !important; border-color: #A8DBC3;}
-.badge.retard   {background: #FBE3E8; color: #A0213A !important; border-color: #F0B3BF;}
-.section-titre {color: #5B3FB5 !important; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin: .9rem 0 .3rem 0;}
+.carte-kpi.bleu {border-top: 3px solid var(--lav);} .carte-kpi.bleu .kpi-val {color: var(--lav-fonce) !important;}
+/* ---- Badges ---- */
+.badge {display: inline-block; border-radius: 999px; padding: .18rem .7rem; font-size: .76rem;
+    font-weight: 600; margin: 0 .25rem .25rem 0; border: 1px solid transparent;}
+.badge.apayer    {background: #F4E5CB; color: #7A4A00 !important; border-color: #E0C48F;}
+.badge.partielle {background: var(--lav-clair); color: #4A2FA0 !important; border-color: var(--lav);}
+.badge.averif    {background: var(--lav-clair); color: #4A2FA0 !important; border-color: var(--bord);}
+.badge.payee     {background: #D9F0E2; color: #176244 !important; border-color: #A8DBC3;}
+.badge.retard    {background: #F6DEE3; color: #A0213A !important; border-color: #EFB2BE;}
+/* ---- Titres de sections & notes sidebar (gris -> MAUVE) ---- */
+.section-titre {color: var(--lav-fonce) !important; font-size: .74rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px; margin: .9rem 0 .3rem 0;}
 .sidebar-note {color: var(--texte-doux) !important; font-size: .82rem; line-height: 1.5; margin: 0 0 .5rem 0;}
 .sidebar-note strong {color: var(--texte) !important;}
-.marque {color: #5B3FB5 !important; font-weight: 700; font-size: 1.05rem; letter-spacing: .6px; text-transform: uppercase; margin: 0 0 .6rem 0;}
+.marque {color: var(--lav-fonce) !important; font-weight: 700; font-size: 1.05rem;
+    letter-spacing: .6px; text-transform: uppercase; margin: 0 0 .6rem 0;}
+/* ---- Mobile ---- */
 @media (max-width: 768px) {
     .block-container {padding: .7rem .8rem 2rem .8rem; max-width: 100%;}
     .hero {padding: 1.1rem 1.2rem; border-radius: 14px;}
@@ -1576,7 +1624,7 @@ if "recap" not in st.session_state:
 with st.sidebar:
     st.markdown('<p class="marque">Factures IA</p>', unsafe_allow_html=True)
     st.caption("✨ Lecture automatique des PDF · suivi des paiements · export comptable")
-    st.caption("Version 47")
+    st.caption("Version 48")
 
     # ---------- COMPTE : connexion / inscription / deconnexion ----------
     if _cloud_actif():
@@ -3517,4 +3565,4 @@ if page == "📋 Récapitulatif":
                         st.warning("Coche d'abord la case de confirmation. Action annulée, "
                                    "aucune donnée n'a été touchée.")
 
-st.caption("Factures IA — version 47 · " + datetime.date.today().strftime("%d/%m/%Y"))
+st.caption("Factures IA — version 48 · " + datetime.date.today().strftime("%d/%m/%Y"))
