@@ -721,7 +721,9 @@ def _montants_sur_ligne(ligne):
 
 
 def _collecter_candidats(lignes, tableau_etiq):
-    """Retourne [(poids, index_ligne, montant)] pour chaque montant candidat."""
+    """Retourne [(poids, index_ligne, montant)] pour chaque montant candidat.
+    v48 : si le libelle est seul sur sa ligne (« Montant total HT ») et le
+    montant sur la LIGNE SUIVANTE, on le collecte aussi (poids -1)."""
     candidats = []
     for i, ligne in enumerate(lignes):
         ln = norme(ligne)
@@ -731,8 +733,18 @@ def _collecter_candidats(lignes, tableau_etiq):
             # le "total" vague ne peut pas designer une ligne HT ou TVA
             if etq == r"\btotal\b" and re.search(r"ht\b|hors\s*taxe|tva\b|vat\b|subtotal|sous[- ]total", ln):
                 break
-            for m in _montants_sur_ligne(ligne):
+            sur_place = _montants_sur_ligne(ligne)
+            for m in sur_place:
                 candidats.append((poids, i, m))
+            if not sur_place and i + 1 < len(lignes):
+                # montant reporte sur la ligne suivante — mais seulement si
+                # cette ligne n'est pas elle-meme un libelle comptable
+                suite = lignes[i + 1]
+                ln_suite = norme(suite)
+                if not re.search(r"tva\b|vat\b|ht\b|ttc\b|total|facture|invoice|"
+                                 r"echeance|due|payer|remise|acompte|avoir", ln_suite):
+                    for m in _montants_sur_ligne(suite):
+                        candidats.append((max(poids - 1, 1), i, m))
             break
     return candidats
 
